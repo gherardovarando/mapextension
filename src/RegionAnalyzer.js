@@ -19,22 +19,20 @@
 'use strict';
 
 
-const Task = require('Task');
 const TaskManager = require('TaskManager');
-const Util = require('Util');
 const {
-    fork
+    Task,
+    TaskManager,
+    util,
+    gui
+} = require('electrongui');
+const {
+    fork,
+    ChildProcess
 } = require('child_process');
 const {
     ipcRenderer
 } = require('electron');
-const {
-    ChildProcess
-} = require('child_process');
-const async = require('async');
-
-let gui = require('Gui');
-
 
 
 /**

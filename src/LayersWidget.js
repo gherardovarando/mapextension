@@ -17,19 +17,20 @@
 
  */
 'use strict'
-
-const Util = require('Util');
-const ListGroup = require('ListGroup');
-const TabGroup = require('TabGroup');
-const Grid = require('Grid');
+const {
+  util,
+  ListGroup,
+  TabGroup,
+  Grid,
+  input,
+  ToggleElement,
+  ButtonsContainer,
+  Modal
+}
 const {
     Menu,
     MenuItem
 } = require('electron').remote;
-const Input = require('Input');
-const ToggleElement = require('ToggleElement');
-const Modal = require('Modal');
-const ButtonsContainer = require('ButtonsContainer');
 
 /**
  * Creates a widget containing a list of map layers
@@ -42,8 +43,8 @@ class LayersWidget {
      * Class constructor.
      */
     constructor() {
-        this.element = Util.div(null, 'layers-widget');
-        this.content = Util.div(null, 'content');
+        this.element = util.div(null, 'layers-widget');
+        this.content = util.div(null, 'content');
         this.tabs = new TabGroup(this.content);
         this.baselist = new ListGroup(this.content);
         this.tileslist = new ListGroup(this.content);
@@ -307,7 +308,7 @@ class LayersWidget {
 
     /**
      * This method is a temporal patch for removing drawn points layers.
-     * @param {number} id 
+     * @param {number} id
      */
     _removePointsLayerMarkers(id) {
         if (this.pointsMarkers[id]) {
@@ -319,7 +320,7 @@ class LayersWidget {
 
     /**
      * Adds a layer/configuration into a ListGroup
-     * A custom list item is created and inserted to the list. 
+     * A custom list item is created and inserted to the list.
      * @param {Object} layer leaflet layer.
      * @param {Array<MenuItem>} customMenuItems a list of menu items.
      * @param {ToggleElement} tools specific tools for that layer.
@@ -339,12 +340,12 @@ class LayersWidget {
             }
         });
 
-        let titleTable = Util.div(null, 'table-container');
-        let txtTitleContainer = Util.div(null, 'cell full-width');
+        let titleTable = util.div(null, 'table-container');
+        let txtTitleContainer = util.div(null, 'cell full-width');
         txtTitleContainer.appendChild(txtTitle);
         titleTable.appendChild(txtTitleContainer);
         if (tools) {
-            let btnToolsContainer = Util.div(null, 'cell');
+            let btnToolsContainer = util.div(null, 'cell');
             let btnTools = document.createElement('button');
             btnTools.className = 'btn btn-default';
             btnTools.onclick = (e) => {
@@ -406,22 +407,22 @@ class LayersWidget {
     }
 
     /**
-     * 
-     * @param {Object} layer 
-     * @param {boolean} hasOpacityControl 
-     * @param {boolean} hasColorControl 
-     * @param {boolean} hasRadiusControl 
+     *
+     * @param {Object} layer
+     * @param {boolean} hasOpacityControl
+     * @param {boolean} hasColorControl
+     * @param {boolean} hasRadiusControl
      */
     createToolbox(layer, hasOpacityControl, hasColorControl, hasRadiusControl) {
-        let toolbox = new ToggleElement(Util.div(null, 'table-container toolbox'));
+        let toolbox = new ToggleElement(util.div(null, 'table-container toolbox'));
         toolbox.hide();
         toolbox.element.onclick = (e) => e.stopPropagation();
         let configuration = layer._configuration;
 
         if (hasColorControl) {
-            let colorCell = Util.div(null, 'cell');
+            let colorCell = util.div(null, 'cell');
 
-            let colorPickerContainer = Util.div(null, 'color-picker-wrapper');
+            let colorPickerContainer = util.div(null, 'color-picker-wrapper');
             colorPickerContainer.style.backgroundColor = configuration.color || '#ed8414';
 
             let input = Input.input({
@@ -453,7 +454,7 @@ class LayersWidget {
         }
 
         if (hasRadiusControl) {
-            let radiusCell = Util.div(null, 'cell full-width');
+            let radiusCell = util.div(null, 'cell full-width');
 
             let input = Input.selectInput({
                 label: 'Radius: ',
@@ -478,7 +479,7 @@ class LayersWidget {
         }
 
         if (hasOpacityControl) {
-            let opacityCell = Util.div(null, 'cell');
+            let opacityCell = util.div(null, 'cell');
 
             let input = Input.input({
                 label: '',

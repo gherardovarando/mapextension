@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/gherardovarando/mapExtension#readme",
   "dependencies": {
+    "babyparse": "^0.4.6",
     "leaflet": "^1.0.3",
     "leaflet-draw": "^0.4.9",
     "leaflet-geometryutil": "^0.8.0",

@@ -19,7 +19,6 @@
 'use strict';
 
 
-const TaskManager = require('TaskManager');
 const {
     Task,
     TaskManager,

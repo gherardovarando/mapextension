@@ -26,7 +26,7 @@ const {
   ToggleElement,
   ButtonsContainer,
   Modal
-}
+} = require('electrongui');
 const {
     Menu,
     MenuItem
@@ -43,8 +43,8 @@ class LayersWidget {
      * Class constructor.
      */
     constructor() {
-        this.element = util.div(null, 'layers-widget');
-        this.content = util.div(null, 'content');
+        this.element = util.div('layers-widget');
+        this.content = util.div('content');
         this.tabs = new TabGroup(this.content);
         this.baselist = new ListGroup(this.content);
         this.tileslist = new ListGroup(this.content);
@@ -340,12 +340,12 @@ class LayersWidget {
             }
         });
 
-        let titleTable = util.div(null, 'table-container');
-        let txtTitleContainer = util.div(null, 'cell full-width');
+        let titleTable = util.div('table-container');
+        let txtTitleContainer = util.div('cell full-width');
         txtTitleContainer.appendChild(txtTitle);
         titleTable.appendChild(txtTitleContainer);
         if (tools) {
-            let btnToolsContainer = util.div(null, 'cell');
+            let btnToolsContainer = util.div('cell');
             let btnTools = document.createElement('button');
             btnTools.className = 'btn btn-default';
             btnTools.onclick = (e) => {
@@ -414,15 +414,15 @@ class LayersWidget {
      * @param {boolean} hasRadiusControl
      */
     createToolbox(layer, hasOpacityControl, hasColorControl, hasRadiusControl) {
-        let toolbox = new ToggleElement(util.div(null, 'table-container toolbox'));
+        let toolbox = new ToggleElement(util.div('table-container toolbox'));
         toolbox.hide();
         toolbox.element.onclick = (e) => e.stopPropagation();
         let configuration = layer._configuration;
 
         if (hasColorControl) {
-            let colorCell = util.div(null, 'cell');
+            let colorCell = util.div('cell');
 
-            let colorPickerContainer = util.div(null, 'color-picker-wrapper');
+            let colorPickerContainer = util.div('color-picker-wrapper');
             colorPickerContainer.style.backgroundColor = configuration.color || '#ed8414';
 
             let input = Input.input({
@@ -454,7 +454,7 @@ class LayersWidget {
         }
 
         if (hasRadiusControl) {
-            let radiusCell = util.div(null, 'cell full-width');
+            let radiusCell = util.div('cell full-width');
 
             let input = Input.selectInput({
                 label: 'Radius: ',
@@ -479,7 +479,7 @@ class LayersWidget {
         }
 
         if (hasOpacityControl) {
-            let opacityCell = util.div(null, 'cell');
+            let opacityCell = util.div('cell');
 
             let input = Input.input({
                 label: '',

@@ -72,10 +72,17 @@ class MapExtension extends GuiExtension {
             menuLabel: 'Maps',
             menuTemplate: [{
                     label: 'Show',
-                    click: () => this.show
+                    click: () => this.show()
                 },
                 {
-                    label: 'Load map'
+                    label: 'Load map',
+                    click: () =>{
+                     if (this.manager){
+                       MapIO.loadMapfromFile((conf)=>{
+                         this.manager.load(conf);
+                       });
+                     }
+                    }
                 },
                 {
                     label: 'Create map'
@@ -89,6 +96,7 @@ class MapExtension extends GuiExtension {
     }
 
     activate() {
+        this.appendMenu();
         this.addToggleButton({
             id: this.constructor.name,
             buttonsContainer: gui.header.actionsContainer,
@@ -157,7 +165,34 @@ class MapExtension extends GuiExtension {
         this.mapPane.show();
 
         this.manager = new MapManager();
-        this.manager.leafletMap(this.mapPane.top);
+        this.manager.leafletMap(this.mapPane.top, {
+            builder: {
+                controls: {
+                    draw: {
+                        draw: {
+                            polyline: true,
+                            marker: true,
+                            polygon: true,
+                            rectangle: true,
+                            circle: true
+                        },
+                        edit: true
+                    },
+                    zoom: true,
+                    layers: true
+                },
+                tooltip:{
+                  polygon: true,
+                  circle: true
+                },
+                popup:{
+                  rectangle: true,
+                  polygon:false,
+                  circle:true,
+                  polyline: true
+                }
+            }
+        });
         // globalShortcut.register('CmdOrCtrl+Up', () => {
         //     this.mapManager.tUP();
         // });

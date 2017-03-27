@@ -205,10 +205,10 @@ class MapIO {
             regions
         }
 
-        configuration._name = 'map';
-        util.setOne(configuration, 'name', 'NAME', 'Name', 'title', 'TITLE', 'Title', '_name');
-        configuration._auth = 'Unknown';
-        util.setOne(configuration, 'authors', 'AUTHORS', 'auth', 'AUTH', 'Authors', 'AUTHS', 'auth', 'author', 'AUTHOR', 'Author', '_auth');
+        //configuration._name = 'map';
+        //util.setOne(configuration, 'name', 'NAME', 'Name', 'title', 'TITLE', 'Title', '_name');
+        //configuration._auth = 'Unknown';
+        //util.setOne(configuration, 'authors', 'AUTHORS', 'auth', 'AUTH', 'Authors', 'AUTHS', 'auth', 'author', 'AUTHOR', 'Author', '_auth');
 
         configuration.layers = {};
         let id = 0; //use a unique id for every layer
@@ -253,17 +253,18 @@ class MapIO {
     static parseLayerConfig(config) {
         config._type = 'tilesLayer';
         config._name = `new ${config.type}`;
-        util.setOne(config, 'authors', ['author', 'AUTHORS', 'AUTHOR', 'auth', 'AUTH']);
-        util.setOne(config, 'name', ['NAME', 'title', 'TITLE', '_name']);
-        util.setOne(config, 'type', ['TYPE', 'layerType', 'layertype', '_type']);
-        util.setOne(config, 'source', ['SOURCE', 'Source']);
-        util.setOne(config, 'size', ['SIZE', 'Size', 'dim', 'DIM', 'Dim']);
+        // util.setOne(config, 'authors', ['author', 'AUTHORS', 'AUTHOR', 'auth', 'AUTH']);
+        // util.setOne(config, 'name', ['NAME', 'title', 'TITLE', '_name']);
+        // util.setOne(config, 'type', ['TYPE', 'layerType', 'layertype', '_type']);
+        // util.setOne(config, 'source', ['SOURCE', 'Source']);
+        // util.setOne(config, 'size', ['SIZE', 'Size', 'dim', 'DIM', 'Dim']);
         config.alias = config.alias || config.name;
         config.attribution = config.attribution || '@gherardo.varando';
         config.basePath = config.basePath || '';
 
 
         if (config.type.includes('tilesLayer')) {
+            config.type = 'tileLayer';
             config.tilesUrlTemplate = config.tilesUrlTemplate || '';
             if (config.tilesUrlTemplate.startsWith("http:") ||
                 config.tilesUrlTemplate.startsWith("file:") ||
@@ -333,7 +334,7 @@ class MapIO {
             }
             config.pointsUrlTemplate = config.basePath + config.pointsUrlTemplate;
             config.__color = 'red';
-            util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
+            //util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
 
         }
         if (config.type.includes('pixelsLayer')) {
@@ -355,13 +356,12 @@ class MapIO {
         if (config.type.includes('guideLayer')) {
             config.previewImageUrl = path.join(app.getAppPath(), 'images', 'grid.png');
             config.__color = 'blue';
-            util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
+            //util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
         }
         if (config.type.includes('gridLayer')) {
             config.previewImageUrl = path.join(app.getAppPath(), 'images', 'grid.png');
             config.__color = 'blue';
-            util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
-
+            //util.setOne(config, 'color', ['COLOR', 'Color', '__color']);
         }
         if (config.type.includes('imageLayer')) {
             config.imageUrl = config.imageUrl || '';

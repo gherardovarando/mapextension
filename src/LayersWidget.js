@@ -18,14 +18,14 @@
  */
 'use strict'
 const {
-  util,
-  ListGroup,
-  TabGroup,
-  Grid,
-  input,
-  ToggleElement,
-  ButtonsContainer,
-  Modal
+    util,
+    ListGroup,
+    TabGroup,
+    Grid,
+    input,
+    ToggleElement,
+    ButtonsContainer,
+    Modal
 } = require('electrongui');
 const {
     Menu,
@@ -97,7 +97,7 @@ class LayersWidget {
     setMapManager(mapManager) {
         this.mapManager = mapManager;
 
-        this.mapManager.on('clean', () => {
+        this.mapManager.on('clear', () => {
             this.baselist.clean();
             this.tileslist.clean();
             this.overlaylist.clean();
@@ -106,7 +106,7 @@ class LayersWidget {
             this.pointsMarkers = {};
         });
 
-        this.mapManager.on('add:tileslayer', (e) => {
+        this.mapManager.on('load:tilelayer', (e) => {
             let configuration = e.configuration;
             let layer = e.layer;
             let list;
@@ -116,12 +116,12 @@ class LayersWidget {
                 list = this.tileslist;
             }
 
-            let tools = this.createToolbox(layer, true, false, false);
+            let tools = this.createToolbox(layer, configuration, true, false, false);
 
             if (configuration.baseLayer) {
                 if (!this.baseLayer) {
                     this.baseLayer = layer;
-                    this.mapManager._map.addLayer(this.baseLayer);
+                    this.mapManager.map.addLayer(this.baseLayer);
                 }
             }
             let customMenuItems = [];
@@ -136,7 +136,9 @@ class LayersWidget {
                 }
             });
             customMenuItems.push(deleteMenuItem);
-            customMenuItems.push(new MenuItem({ type: 'separator' }));
+            customMenuItems.push(new MenuItem({
+                type: 'separator'
+            }));
 
             let calibrationSettingsMenuItem = new MenuItem({
                 label: 'Calibration settings',
@@ -148,7 +150,7 @@ class LayersWidget {
 
                     let grid = new Grid(3, 2);
 
-                    let numCalibratedSize = Input.input({
+                    let numCalibratedSize = input.input({
                         type: "number",
                         id: "numCalibratedSize",
                         value: configuration.sizeCal || 0,
@@ -160,7 +162,7 @@ class LayersWidget {
                     grid.addElement(lblCalibratedSize, 0, 0);
                     grid.addElement(numCalibratedSize, 0, 1);
 
-                    let numCalibratedDepth = Input.input({
+                    let numCalibratedDepth = input.input({
                         type: "number",
                         id: "numCalibratedDepth",
                         value: configuration.depthCal || 0,
@@ -172,7 +174,7 @@ class LayersWidget {
                     grid.addElement(lblCalibratedDepth, 1, 0);
                     grid.addElement(numCalibratedDepth, 1, 1);
 
-                    let txtCalibrationUnit = Input.input({
+                    let txtCalibrationUnit = input.input({
                         type: "text",
                         id: "txtCalibrationUnit",
                         value: configuration.unitCal || "u"
@@ -228,12 +230,11 @@ class LayersWidget {
             this._addToList(layer, customMenuItems, tools, configuration, list);
         });
 
-        this.mapManager.on('add:pointslayermarkers', (e) => {
+        this.mapManager.on('load:pointslayermarker', (e) => {
             let configuration = e.configuration;
             let layer = e.layer;
-            layer._configuration = configuration;
 
-            let tools = this.createToolbox(layer, false, true, true);
+            let tools = this.createToolbox(layer, configuration, false, true, true);
             let customMenuItems = [];
             let deleteMenuItem = new MenuItem({
                 label: 'Delete',
@@ -243,12 +244,31 @@ class LayersWidget {
                 }
             });
             customMenuItems.push(deleteMenuItem);
-            this.pointsMarkers[configuration.id] = layer;
+            this.pointsMarkers[configuration.name] = layer;
 
             this._addToList(layer, customMenuItems, tools, configuration, this.overlaylist);
         });
 
-        this.mapManager.on('add:pointslayer', (e) => {
+
+        this.mapManager.on('load:featuregroup', (e) => {
+            let configuration = e.configuration;
+            let layer = e.layer;
+
+            let tools = this.createToolbox(layer, configuration, false, true, true);
+            let customMenuItems = [];
+            let deleteMenuItem = new MenuItem({
+                label: 'Delete',
+                click: () => {
+                  this.mapManager.removeLayer(configuration.name);
+                }
+            });
+            customMenuItems.push(deleteMenuItem);
+
+            this._addToList(layer, customMenuItems, tools, configuration, this.overlaylist);
+        });
+
+
+        this.mapManager.on('load:pointslayer', (e) => {
             let layer = e.layer;
             let configuration = e.configuration;
 
@@ -260,7 +280,9 @@ class LayersWidget {
                 }
             });
             customMenuItems.push(deleteMenuItem);
-            customMenuItems.push(new MenuItem({ type: 'separator' }));
+            customMenuItems.push(new MenuItem({
+                type: 'separator'
+            }));
 
             let easyToDrawMenuItem = new MenuItem({
                 label: 'Easy to draw',
@@ -276,7 +298,7 @@ class LayersWidget {
             this._addToList(layer, customMenuItems, null, configuration, this.datalist);
         });
 
-        this.mapManager.on('add:pixelslayer', (e) => {
+        this.mapManager.on('load:pixelslayer', (e) => {
             let layer = e.layer;
             let configuration = e.configuration;
 
@@ -294,14 +316,14 @@ class LayersWidget {
 
         this.mapManager.on('remove:layer', (e) => {
             if (e.configuration.baseLayer) {
-                this.baselist.removeItem(e.configuration.id);
+                this.baselist.removeItem(e.configuration.name);
             } else if (e.configuration.type === 'pointsLayer' || e.configuration.type === 'pixelsLayer') {
-                this._removePointsLayerMarkers(e.configuration.id);
-                this.datalist.removeItem(e.configuration.id);
+                this._removePointsLayerMarkers(e.configuration.name);
+                this.datalist.removeItem(e.configuration.name);
             } else if (e.configuration.type === 'tilesLayer') {
-                this.tileslist.removeItem(e.configuration.id);
+                this.tileslist.removeItem(e.configuration.name);
             } else {
-                this.overlaylist.removeItem(e.configuration.id);
+                this.overlaylist.removeItem(e.configuration.name);
             }
         });
     }
@@ -312,7 +334,7 @@ class LayersWidget {
      */
     _removePointsLayerMarkers(id) {
         if (this.pointsMarkers[id]) {
-            this.mapManager._map.removeLayer(this.pointsMarkers[id]);
+            this.mapManager.map.removeLayer(this.pointsMarkers[id]);
             delete this.pointsMarkers[id];
             this.overlaylist.removeItem(id);
         }
@@ -328,7 +350,7 @@ class LayersWidget {
      * @param {ListGroup} list target ListGroup.
      */
     _addToList(layer, customMenuItems, tools, configuration, list) {
-        let txtTitle = Input.input({
+        let txtTitle = input.input({
             value: configuration.name,
             className: 'list-input',
             readOnly: true,
@@ -371,24 +393,24 @@ class LayersWidget {
             context.append(menuItem);
         });
         list.addItem({
-            id: configuration.id,
+            id: configuration.name,
             title: titleTable,
             details: tools,
-            active: (this.baseLayer === layer) || (list === this.datalist) || (this.mapManager._map.hasLayer(layer)),
+            active: (this.baseLayer === layer) || (list === this.datalist) || (this.mapManager.map.hasLayer(layer)),
             oncontextmenu: () => {
                 context.popup()
             },
             onclick: {
                 active: (item, e) => {
                     if (configuration.baseLayer) {
-                        this.mapManager._map.removeLayer(this.baseLayer);
+                        this.mapManager.map.removeLayer(this.baseLayer);
                         this.baseLayer = layer;
                     }
-                    this.mapManager._map.addLayer(layer);
+                    this.mapManager.map.addLayer(layer);
                 },
                 deactive: (item, e) => {
                     if (!configuration.baseLayer) {
-                        this.mapManager._map.removeLayer(layer);
+                        this.mapManager.map.removeLayer(layer);
                     } else {
                         item.element.classList.add('active'); //no deactive if baselayer
                     }
@@ -401,7 +423,7 @@ class LayersWidget {
 
         if (typeof layer.on === 'function') {
             layer.on('remove', () => {
-                list.deactiveItem(configuration.id);
+                list.deactiveItem(configuration.name);
             });
         }
     }
@@ -413,11 +435,10 @@ class LayersWidget {
      * @param {boolean} hasColorControl
      * @param {boolean} hasRadiusControl
      */
-    createToolbox(layer, hasOpacityControl, hasColorControl, hasRadiusControl) {
+    createToolbox(layer, configuration, hasOpacityControl, hasColorControl, hasRadiusControl) {
         let toolbox = new ToggleElement(util.div('table-container toolbox'));
         toolbox.hide();
         toolbox.element.onclick = (e) => e.stopPropagation();
-        let configuration = layer._configuration;
 
         if (hasColorControl) {
             let colorCell = util.div('cell');
@@ -425,7 +446,7 @@ class LayersWidget {
             let colorPickerContainer = util.div('color-picker-wrapper');
             colorPickerContainer.style.backgroundColor = configuration.color || '#ed8414';
 
-            let input = Input.input({
+            input.input({
                 label: '',
                 className: '',
                 value: configuration.color || '#ed8414',
@@ -456,7 +477,7 @@ class LayersWidget {
         if (hasRadiusControl) {
             let radiusCell = util.div('cell full-width');
 
-            let input = Input.selectInput({
+            input.selectInput({
                 label: 'Radius: ',
                 className: '',
                 parent: radiusCell,
@@ -481,7 +502,7 @@ class LayersWidget {
         if (hasOpacityControl) {
             let opacityCell = util.div('cell');
 
-            let input = Input.input({
+            input.input({
                 label: '',
                 className: 'form-control',
                 parent: opacityCell,

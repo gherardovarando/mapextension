@@ -75,27 +75,28 @@ let options = {
     builder: {
         controls: {
             draw: {
+                position: 'bottomleft',
                 draw: {
-                    polyline: true,
+                    polyline: false,
                     marker: true,
                     polygon: true,
                     rectangle: true,
-                    circle: true
+                    circle: false
                 },
                 edit: true
             },
-            zoom: true,
+            zoom: {
+                position: 'topright'
+            },
             layers: () => {}
         },
         tooltip: {
             polygon: true,
-            circle: true
+            rectangle: true,
+            marker: true
         },
         popup: {
-            rectangle: true,
-            polygon: false,
-            circle: true,
-            polyline: true
+            marker: true
         }
     }
 }
@@ -605,13 +606,13 @@ class MapExtension extends GuiExtension {
             if (!this.sidebarRegions.list.items[layerConfig._id].element.className.includes('active')) {
                 this.sidebarRegions.list.activeItem(layerConfig._id);
                 this.mapBuilder._l.setView(layer.getLatLngs()[0][0]);
-                this.selectedRegions.push(layer);
+                this.selectedRegions.push(e);
                 layer.setStyle({
                     fillOpacity: 0.8
                 });
             } else {
                 this.sidebarRegions.list.deactiveItem(layerConfig._id);
-                this.selectedRegions.splice(this.selectedRegions.indexOf(layer), 1);
+                this.selectedRegions.splice(this.selectedRegions.indexOf(e), 1);
                 layer.setStyle({
                     fillOpacity: 0.3
                 });
@@ -625,7 +626,7 @@ class MapExtension extends GuiExtension {
         inp.readOnly = true;
         inp.onchange = () => {
             this.sidebarRegions.list.setKey(layerConfig._id, inp.value);
-            this.mapBuilder.renameLayer(layerConfig.name, inp.value, where);
+            this.mapBuilder.renameLayer(layerConfig.name, inp.value, where.name);
             layer.setTooltipContent(inp.value);
             inp.readOnly = true;
         }
@@ -649,7 +650,7 @@ class MapExtension extends GuiExtension {
                         this.mapBuilder.setLayerStyle(configuration.name, {
                             color: col,
                             fillColor: col
-                        }, where);
+                        }, where.name);
                     }
                 }));
             });
@@ -662,7 +663,7 @@ class MapExtension extends GuiExtension {
                 label: 'Delete',
                 click: () => {
                     if (this.selectedRegions.length === 0) {
-                        this.selectedRegions.push(layer);
+                        this.selectedRegions.push(e);
                     }
                     this.deleteRegionsCheck(this.selectedRegions);
                     this.selectedRegions = [];
@@ -711,7 +712,7 @@ class MapExtension extends GuiExtension {
             onclick: {
                 active: () => {
                     this.mapBuilder._l.setView(layer.getLatLngs()[0][0]);
-                    this.selectedRegions.push(layer);
+                    this.selectedRegions.push(e);
                     layer.setStyle({
                         fillOpacity: 0.8
                     });
@@ -728,7 +729,90 @@ class MapExtension extends GuiExtension {
         });
     }
 
+    _addMarker(e) {
+        let layer = e.layer;
+        let layerConfig = e.configuration;
+        let where = e.where;
+
+        let context = new Menu();
+
+        context.append(new MenuItem({
+            label: 'Edit details',
+            click: () => {
+                this.editMarkerDetails(e);
+            }
+        }));
+
+        context.append(new MenuItem({
+            label: 'Delete',
+            click: () => {
+                this.deleteMarkerCheck(e);
+            }
+        }));
+
+        let txtTitle = input.input({
+            type: `text`,
+            id: `txtmarker_${layerConfig.id}`,
+            value: layerConfig.name,
+            className: `list-input`,
+            readOnly: true,
+            onchange: () => {
+                this.sidebarRegions.markers.setKey(layerConfig.id, txtTitle.value);
+                this.sidebarRegions.markers.setTitle(layerConfig.id, txtTitle.value);
+                layerConfig.name = txtTitle.value;
+                layer.setTooltipContent(txtTitle.value);
+                txtTitle.readOnly = true;
+            },
+            onblur: () => {
+                txtTitle.value = layerConfig.name;
+                txtTitle.readOnly = true;
+            },
+            ondblclick: (event) => {
+                event.stopPropagation();
+                txtTitle.readOnly = false;
+            }
+        });
+        txtTitle.size = layerConfig.name.length + 1;
+        txtTitle.oncontextmenu = () => {
+            context.popup();
+        };
+
+        let title = document.createElement('STRONG');
+        title.appendChild(txtTitle);
+
+        this.sidebarRegions.markers.addItem({
+            id: layerConfig._id,
+            title: title,
+            key: layerConfig.name,
+            toggle: true,
+            onclick: {
+                active: () => {
+                    this.sidebarRegions.markers.deactiveAll();
+                    this.mapBuilder.map.setView(layer.getLatLng());
+                    layer.openPopup();
+                },
+                deactive: () => {
+                    layer.closePopup();
+                }
+            }
+        });
+
+        layer.on('click', () => {
+            this.sidebarRegions.markers.deactiveAll();
+            this.sidebarRegions.markers.activeItem(layerConfig.id);
+            this.mapBuilder.map.setView(layer.getLatLng());
+        });
+
+        layer.on('dblclick', () => {
+            this.editMarkerDetails(e);
+        });
+    }
+
     addListeners() {
+        this.mapBuilder.on('error', (e) => {
+            gui.notify(e.error);
+        });
+
         //when clean mapmanager clean interface
         this.mapBuilder.on('clear', () => {
             this.sidebarRegions.list.clear();
@@ -741,104 +825,32 @@ class MapExtension extends GuiExtension {
         this.mapBuilder.on('remove:layer', (e) => {
             let configuration = e.configuration;
             let type = e.configuration.type;
+            if (type === 'polygon' || type === 'rectangle') {
+                this.sidebarRegions.list.removeItem(configuration._id);
+            }
+            if (type === 'marker') {
+                this.sidebarRegions.markers.removeItem(configuration._id);
+            }
         });
 
         //when a polygon is added create region element in the sidebarRegions and relative actions,
         this.mapBuilder.on('load:polygon', (e) => {
-              this._addRegion(e);
+            this._addRegion(e);
         });
 
-        this.mapBuilder.on('load:rectangle', (e) =>{
-           this._addRegion(e);
+        this.mapBuilder.on('load:rectangle', (e) => {
+            this._addRegion(e);
         });
 
-        this.mapBuilder.on('add:marker', (e) => {
-            let layer = e.layer;
-            let layerConfig = e.layer._configuration;
-
-            let context = new Menu();
-
-            context.append(new MenuItem({
-                label: 'Edit details',
-                click: () => {
-                    this.editMarkerDetails(layer);
-                }
-            }));
-
-            context.append(new MenuItem({
-                label: 'Delete',
-                click: () => {
-                    this.deleteMarkerCheck(layer);
-                }
-            }));
-
-            let txtTitle = Input.input({
-                type: `text`,
-                id: `txtmarker_${layerConfig.id}`,
-                value: layerConfig.name,
-                className: `list-input`,
-                readOnly: true,
-                onchange: () => {
-                    this.sidebarRegions.markers.setKey(layerConfig.id, txtTitle.value);
-                    layerConfig.name = txtTitle.value;
-                    layer.setTooltipContent(txtTitle.value);
-                    txtTitle.readOnly = true;
-                },
-                onblur: () => {
-                    txtTitle.value = layerConfig.name;
-                    txtTitle.readOnly = true;
-                },
-                ondblclick: (event) => {
-                    event.stopPropagation();
-                    txtTitle.readOnly = false;
-                }
-            });
-            txtTitle.size = layerConfig.name.length + 1;
-            txtTitle.oncontextmenu = () => {
-                context.popup();
-            };
-
-            let title = document.createElement('STRONG');
-            title.appendChild(txtTitle);
-
-            this.sidebarRegions.markers.addItem({
-                id: layerConfig.id,
-                title: title,
-                key: layerConfig.name,
-                toggle: true,
-                onclick: {
-                    active: () => {
-                        this.sidebarRegions.markers.deactiveAll();
-                        this.mapBuilder._map.setView(layer.getLatLng());
-                        layer.openPopup();
-                    },
-                    deactive: () => {
-                        layer.closePopup();
-                    }
-                }
-            });
-
-            layer.on('click', () => {
-                this.sidebarRegions.markers.deactiveAll();
-                this.sidebarRegions.markers.activeItem(layerConfig.id);
-                this.mapBuilder._map.setView(layer.getLatLng());
-            });
-
-            layer.on('dblclick', (e) => {
-                this.editMarkerDetails(layer);
-            });
+        this.mapBuilder.on('load:marker', (e) => {
+            this._addMarker(e);
         });
 
-        this.mapBuilder.on('remove:marker', (e) => {
-            this.sidebarRegions.markers.removeItem(e.layer._configuration.id);
-        });
-
-        this.mapBuilder.on('remove:polygon', (e) => {
-            this.sidebarRegions.list.removeItem(e.layer._configuration.id);
-        });
     }
 
-    editMarkerDetails(marker) {
+    editMarkerDetails(e) {
+        let marker = e.layer;
+        let configuration = e.configuration;
         // OPEN A MODAL ASKING FOR DETAILS.
         var modal = new Modal({
             title: "Edit marker details",
@@ -847,10 +859,10 @@ class MapExtension extends GuiExtension {
 
         let grid = new Grid(2, 2);
 
-        let txtMarkerName = Input.input({
+        let txtMarkerName = input.input({
             type: "text",
             id: "txtmarkername",
-            value: marker._configuration.name
+            value: configuration.name
         });
         let lblMarkerName = document.createElement("LABEL");
         lblMarkerName.htmlFor = "txtmarkername";
@@ -860,7 +872,7 @@ class MapExtension extends GuiExtension {
 
         let taMarkerDetails = document.createElement("TEXTAREA");
         taMarkerDetails.id = "tamarkerdetails";
-        taMarkerDetails.value = marker._configuration.details;
+        taMarkerDetails.value = configuration.details;
         taMarkerDetails.rows = 5
         taMarkerDetails.style.width = '100%';
         let lblMarkerDetails = document.createElement("LABEL");
@@ -882,9 +894,9 @@ class MapExtension extends GuiExtension {
             id: "SaveMarker00",
             text: "Save",
             action: () => {
-                this.sidebarRegions.markers.setKey(marker._configuration.name, txtMarkerName.value);
-                marker._configuration.name = txtMarkerName.value;
-                marker._configuration.details = taMarkerDetails.value;
+                this.sidebarRegions.markers.setKey(configuration.id, txtMarkerName.value);
+                configuration.name = txtMarkerName.value;
+                configuration.details = taMarkerDetails.value;
                 marker.setTooltipContent(txtMarkerName.value);
                 marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
                 modal.destroy();
@@ -899,17 +911,17 @@ class MapExtension extends GuiExtension {
         modal.show();
     }
 
-    deleteMarkerCheck(marker) {
+    deleteMarkerCheck(e) {
         dialog.showMessageBox({
             title: 'Delete selected marker?',
             type: 'warning',
             buttons: ['No', 'Yes'],
             message: `Delete the selected marker? (no undo available)`,
-            detail: `Marker to be deleted: ${marker._configuration.name}.`,
+            detail: `Marker to be deleted: ${e.configuration.name}.`,
             noLink: true
         }, (id) => {
             if (id > 0) {
-                this.mapBuilder.removeMarker(marker, true);
+                this.mapBuilder.removeLayer(e.configuration.name, e.where.name);
             }
         });
     }
@@ -920,12 +932,12 @@ class MapExtension extends GuiExtension {
             type: 'warning',
             buttons: ['No', "Yes"],
             message: `Delete the selected regions? (no undo available)`,
-            detail: `Regions to be deleted: ${regions.map((reg) => { return reg._configuration.name })}`,
+            detail: `Regions to be deleted: ${regions.map((reg) => { return reg.configuration.name })}`,
             noLink: true
         }, (id) => {
             if (id > 0) {
                 regions.map((reg) => {
-                    this.mapBuilder.removePolygon(reg, true);
+                    this.mapBuilder.removeLayer(reg.configuration.name, reg.where.name);
                 });
                 regions = [];
             }

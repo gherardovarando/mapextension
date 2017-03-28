@@ -320,7 +320,7 @@ class LayersWidget {
             } else if (e.configuration.type === 'pointsLayer' || e.configuration.type === 'pixelsLayer') {
                 this._removePointsLayerMarkers(e.configuration.name);
                 this.datalist.removeItem(e.configuration.name);
-            } else if (e.configuration.type === 'tilesLayer') {
+            } else if (e.configuration.type === 'tileLayer') {
                 this.tileslist.removeItem(e.configuration.name);
             } else {
                 this.overlaylist.removeItem(e.configuration.name);

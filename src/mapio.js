@@ -199,7 +199,7 @@ function parseMap(configuration) {
         regions
     }
 
-
+    configuration.data = configuration.data || {};
     configuration.layers = {};
     for (var a in alls) {
         for (var lay in alls[a]) {
@@ -209,7 +209,8 @@ function parseMap(configuration) {
                     let c = findConfigurationSync(configuration.basePath + alls[a][lay] + path.sep, alls[a][lay]);
                     c.basePath = c.basePath || (configuration.basePath + alls[a][lay] + path.sep);
                     c.name = c.name || `${c.type}_${indx++}`;
-                    if (configuration.type === 'pointsLayer' || configuration.type === 'pixelsLayer') {
+                    console.log(c.type);
+                    if (c.type == 'pointsLayer' || c.type == 'pixelsLayer') {
                         configuration.data[c.name] = parseLayer(c);
                     } else {
                         configuration.layers[c.name] = parseLayer(c);
@@ -222,7 +223,11 @@ function parseMap(configuration) {
                 let c = alls[a][lay];
                 c.basePath = c.basePath || configuration.basePath;
                 c.name = c.name || `${c.type}_${indx++}`;
-                configuration.layers[c.name] = parseLayer(c);
+                if (c.type == 'pointsLayer' || c.type == 'pixelsLayer') {
+                    configuration.data[c.name] = parseLayer(c);
+                } else {
+                    configuration.layers[c.name] = parseLayer(c);
+                }
             }
         }
     }

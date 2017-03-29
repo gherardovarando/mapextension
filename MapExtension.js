@@ -320,11 +320,12 @@ class MapExtension extends GuiExtension {
             gui.workspace.on('load', () => {
                 gui.notify('loading maps from workspace...');
                 this.mapBuilder.clear();
-                this.mapsList.clear();
-                let maps = gui.workspace.getSpace(this) || {};
-                let tot = Object.keys(maps).length;
-                Object.keys(maps).map((id, i) => {
-                    this.addNewMap(mapio.parseMap(maps[id]));
+                this.mapsList.clean();
+                this.maps = gui.workspace.getSpace(this) || {};
+                let tot = 0;
+                Object.keys(this.maps).map((id, i) => {
+                    this.addNewMap(mapio.parseMap(this.maps[id]));
+                    tot++;
                 });
                 gui.workspace.addSpace(this, this.maps, true); //overwriting
                 gui.notify(`${tot} maps from workspace loaded`);
@@ -701,8 +702,8 @@ class MapExtension extends GuiExtension {
 
         //when clean mapmanager clean interface
         this.mapBuilder.on('clear', () => {
-            this.sidebarRegions.list.clear();
-            this.sidebarRegions.markers.clear();
+            this.sidebarRegions.list.clean();
+            this.sidebarRegions.markers.clean();
             this.selectedRegions = [];
         });
 
@@ -916,12 +917,13 @@ class MapExtension extends GuiExtension {
             let siz = Math.max(dim.height, dim.width);
             this.addLayer({
                 name: path,
-                tilesUrlTemplate: `${path}`,
+                imageUrl: path,
+                //tilesUrlTemplate: path,
                 maxZoom: 8,
                 author: 'unknown',
-                type: 'tileLayer',
+                type: 'imageLayer',
                 opacity: 0.8,
-                tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+                //tileSize: [dim.width / siz * 256, dim.height / siz * 256],
                 bounds: [
                     [-Math.floor(dim.height * 256 / siz), 0],
                     [0, Math.floor(dim.width * 256 / siz)]

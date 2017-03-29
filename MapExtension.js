@@ -71,6 +71,7 @@ let options = {
         zoomControl: false
     },
     builder: {
+        dev: true,
         controls: {
             draw: {
                 position: 'bottomleft',
@@ -933,7 +934,8 @@ class MapExtension extends GuiExtension {
                 author: 'unknown',
                 type: 'imageLayer',
                 opacity: 0.8,
-                //tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+                //tileSize: 256,
+                tileSize: [dim.width / siz * 256, dim.height / siz * 256],
                 bounds: [
                     [-Math.floor(dim.height * 256 / siz), 0],
                     [0, Math.floor(dim.width * 256 / siz)]

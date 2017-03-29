@@ -116,7 +116,9 @@ class LayersWidget {
                 list = this.tileslist;
             }
 
-            let tools = this.createToolbox(layer, configuration, true, false, false);
+            let tools = this.createToolbox(layer, configuration, {
+                opacity: true
+            });
 
             if (configuration.baseLayer) {
                 if (!this.baseLayer) {
@@ -234,7 +236,10 @@ class LayersWidget {
             let configuration = e.configuration;
             let layer = e.layer;
 
-            let tools = this.createToolbox(layer, configuration, false, true, true);
+            let tools = this.createToolbox(layer, configuration, {
+                color: true,
+                radius: true
+            });
             let customMenuItems = [];
             let deleteMenuItem = new MenuItem({
                 label: 'Delete',
@@ -254,12 +259,16 @@ class LayersWidget {
             let configuration = e.configuration;
             let layer = e.layer;
 
-            let tools = this.createToolbox(layer, configuration, false, true, true);
+            let tools = this.createToolbox(layer, configuration, {
+                opacity: true,
+                color: true,
+                weight: true
+            });
             let customMenuItems = [];
             let deleteMenuItem = new MenuItem({
                 label: 'Delete',
                 click: () => {
-                  this.mapManager.removeLayer(configuration.name);
+                    this.mapManager.removeLayer(configuration.name);
                 }
             });
             customMenuItems.push(deleteMenuItem);
@@ -435,11 +444,20 @@ class LayersWidget {
      * @param {boolean} hasColorControl
      * @param {boolean} hasRadiusControl
      */
-    createToolbox(layer, configuration, hasOpacityControl, hasColorControl, hasRadiusControl) {
+    createToolbox(layer, configuration, options) {
+        let hasOpacityControl = options.opacity;
+        let hasColorControl = options.color;
+        let hasRadiusControl = options.radius;
+        let hasWeightControl = options.weight;
         let toolbox = new ToggleElement(util.div('table-container toolbox'));
         toolbox.hide();
         toolbox.element.onclick = (e) => e.stopPropagation();
-
+        let first = util.div();
+        let second = util.div();
+        let third = util.div();
+        toolbox.appendChild(first);
+        toolbox.appendChild(second);
+        toolbox.appendChild(third);
         if (hasColorControl) {
             let colorCell = util.div('cell');
 
@@ -454,24 +472,20 @@ class LayersWidget {
                 type: 'color',
                 placeholder: 'color',
                 oninput: (inp) => {
-
+                    colorPickerContainer.style.backgroundColor = inp.value;
+                    this.mapManager.setLayerStyle(configuration.name, {
+                        fillColor: inp.value,
+                        color: inp.value
+                    });
                 },
                 onchange: (inp) => {
-                    colorPickerContainer.style.backgroundColor = inp.value;
-                    configuration.color = inp.value;
-                    configuration.fillColor = inp.value;
-                    layer.eachLayer((l) => {
-                        l.setStyle({
-                            fillColor: inp.value,
-                            color: inp.value
-                        });
-                    });
+
                 }
             });
 
             colorCell.appendChild(colorPickerContainer);
 
-            toolbox.appendChild(colorCell);
+            first.appendChild(colorCell);
         }
 
         if (hasRadiusControl) {
@@ -487,21 +501,37 @@ class LayersWidget {
                 ],
                 value: configuration.weight || 3,
                 oninput: (inp) => {
+                    this.mapManager.setLayerRadius(configuration.name, inp.value);
+                }
+            });
+            second.appendChild(radiusCell);
+        }
+
+        if (hasWeightControl) {
+            let weightCell = util.div('cell full-width');
+
+            input.input({
+                label: 'Stroke:',
+                className: 'form-control vmiddle',
+                parent: weightCell,
+                placeholder: 'stroke',
+                type: 'range',
+                min: 0,
+                max: 10,
+                step: 1,
+                value: configuration.options.weight || configuration.weight || 3,
+                oninput: (inp) => {
                     configuration.weight = inp.value;
-                    layer.eachLayer((l) => {
-                        l.setStyle({
-                            weight: inp.value
-                        });
+                    this.mapManager.setLayerStyle(configuration.name, {
+                        weight: inp.value
                     });
                 }
             });
-
-            toolbox.appendChild(radiusCell);
+            third.appendChild(weightCell);
         }
 
         if (hasOpacityControl) {
             let opacityCell = util.div('cell');
-
             input.input({
                 label: '',
                 className: 'form-control',
@@ -510,17 +540,22 @@ class LayersWidget {
                 max: 1,
                 min: 0,
                 step: 0.1,
-                value: configuration.opacity,
+                value: configuration.options.opacity || configuration.opacity,
                 placeholder: 'opacity',
                 oninput: (inp) => {
-                    configuration.opacity = Number(inp.value);
-                    layer.setOpacity(configuration.opacity);
+                    if (layer.setOpacity) {
+                        layer.setOpacity(inp.value);
+                    }
+                    if (layer.setStyle) {
+                        this.mapManager.setLayerStyle(configuration.name, {
+                            opacity: inp.value,
+                            fillOpacity: inp.value / 3
+                        });
+                    }
                 }
             });
-
-            toolbox.appendChild(opacityCell);
+            first.appendChild(opacityCell);
         }
-
         return toolbox;
     }
 

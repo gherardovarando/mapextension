@@ -50,8 +50,6 @@ const geometryutil = require('leaflet-geometryutil');
 const leafletDraw = require('leaflet-draw');
 const snap = require(`leaflet-snap`);
 const mapBuilder = require('leaflet-map-builder');
-
-
 const {
     ipcRenderer
 } = require('electron');
@@ -113,6 +111,17 @@ class MapExtension extends GuiExtension {
                     click: () => this.show()
                 },
                 {
+                    label: 'Reload map',
+                    click: () => {
+                        if (this.mapBuilder instanceof L.MapBuilder) {
+                            this.mapBuilder.reload();
+                        }
+                    }
+                },
+                {
+                    type: 'separator'
+                },
+                {
                     label: 'Load map',
                     click: () => {
                         mapio.loadMapFile((conf) => {
@@ -121,10 +130,61 @@ class MapExtension extends GuiExtension {
                     }
                 },
                 {
-                    label: 'Create map'
+                    label: 'Create map',
+                    click: () => {
+                        this.createMap();
+                    }
+                }, {
+                    label: 'Export map',
+                    click: () => {
+                        mapio.saveAs(this.mapBuilder.getConfiguration(), (c, p, e) => {
+                            gui.notify(`${c.name} map saved in ${p}`);
+                        }, (err) => {
+                            gui.notify(err);
+                        });
+                    }
+                },
+                {
+                    type: 'separator'
+                },
+                {
+                    label: 'Add layer',
+                    type: 'submenu',
+                    submenu: [{
+                            label: 'File'
+                        },
+                        {
+                            label: 'Tile'
+                        }, {
+                            label: 'Image'
+                        }, {
+                            label: 'Guide'
+                        }
+                    ]
+                },
+                {
+                    label: 'Regions',
+                    type: 'submenu',
+                    submenu: [{
+                        label: 'Delete',
+                        click: () => {
+                            this._deleteRegionsCheck(this.selectedRegions);
+                            this.selectedRegions = [];
+                        }
+                    }, {
+                        label: 'Export',
+                        click: () => {
+
+                        }
+                    }, {
+                        label: 'Compute',
+                        click: () => {
+
+                        }
+                    }]
                 }
             ]
-        }); //always
+        });
         this._colors = ['blue', 'red', 'pink', 'orange', 'yellow', 'green', 'purple', 'black', 'white'];
         this.selectedRegions = [];
         this.maps = {};
@@ -140,7 +200,9 @@ class MapExtension extends GuiExtension {
             groupId: this.constructor.name
         });
         //add the sidebars
-        this.sidebar = new Sidebar(this.element);
+        this.sidebar = new Sidebar(this.element, {
+            className: 'pane-sm scrollable'
+        });
         let flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
 
         this.layersContainer = new LayersWidget();
@@ -214,7 +276,9 @@ class MapExtension extends GuiExtension {
         // globalShortcut.register('CmdOrCtrl+Down', () => {
         //     this.mapBuilder.tDOWN();
         // });
-        this.sidebarRegions = new Sidebar(this.element);
+        this.sidebarRegions = new Sidebar(this.element, {
+            className: 'pane-sm scrollable'
+        });
         this.sidebarRegions.show();
         this.sidebarRegionsTabGroup = new TabGroup(this.sidebarRegions);
         this.sidebarRegionsTabGroup.addItem({
@@ -248,7 +312,7 @@ class MapExtension extends GuiExtension {
             this.sidebarRegions.list.hide();
         });
         //this.regionAnalyzer = new RegionAnalyzer();
-        this.addListeners();
+        this._addListeners();
         gui.workspace.addSpace(this, this.maps, false); //without overwriting
         //saving to workspace and retriving loaded worspace
         if (gui.workspace instanceof Workspace) {
@@ -256,7 +320,8 @@ class MapExtension extends GuiExtension {
             gui.workspace.on('load', () => {
                 gui.notify('loading maps from workspace...');
                 this.mapBuilder.clear();
-                let maps = gui.workspace.getSpace(this);
+                this.mapsList.clear();
+                let maps = gui.workspace.getSpace(this) || {};
                 let tot = Object.keys(maps).length;
                 Object.keys(maps).map((id, i) => {
                     this.addNewMap(mapio.parseMap(maps[id]));
@@ -281,168 +346,6 @@ class MapExtension extends GuiExtension {
 
     } //end activate
 
-    // makeMenu() {
-    //     let mapMenu = new Menu();
-    //     let region = new Menu();
-    //     let layer = new Menu();
-    //     layer.append(new MenuItem({
-    //         label: 'Add layer from file',
-    //         click: () => {
-    //             this.openLayerFile();
-    //         }
-    //     }));
-    //     layer.append(new MenuItem({
-    //         label: 'Add guide layer',
-    //         click: () => {
-    //             this.addLayer({
-    //                 name: 'guide layer',
-    //                 type: 'guideLayer',
-    //                 size: 100,
-    //                 tileSize: 10
-    //             });
-    //             this.mapBuilder.reload();
-    //         }
-    //     }));
-    //     layer.append(new MenuItem({
-    //         label: 'Add tiles layer',
-    //         click: () => {
-    //             this.addLayer({
-    //                 name: 'tiles layer',
-    //                 type: 'tilesLayer',
-    //                 tileSize: 256,
-    //                 tilesUrlTemplate: ''
-    //             });
-    //             this.mapBuilder.reload();
-    //         }
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: 'Delete selected',
-    //         type: 'normal',
-    //         click: () => {
-    //             this.deleteRegionsCheck(this.selectedRegions);
-    //             this.selectedRegions = [];
-    //         }
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: 'Compute selected',
-    //         type: 'normal',
-    //         accelerator: 'CmdOrCtrl + Enter',
-    //         click: () => {
-    //             this.selectedRegions.map((reg) => {
-    //                 this.regionAnalyzer.computeRegionStats(reg);
-    //             });
-    //         }
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: 'Export selected',
-    //         type: 'normal',
-    //         accelerator: 'CmdOrCtrl + E',
-    //         click: () => {
-    //             this.exportsRegions(this.selectedRegions);
-    //         }
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: '',
-    //         type: 'separator'
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: 'Compute all',
-    //         type: 'normal',
-    //         accelerator: 'CmdOrCtrl + Shift + Enter',
-    //         click: () => {
-    //             this.mapBuilder.getLayers('polygon').map((reg) => {
-    //                 this.regionAnalyzer.computeRegionStats(reg);
-    //             });
-    //         }
-    //     }));
-    //     region.append(new MenuItem({
-    //         label: 'Export all',
-    //         type: 'normal',
-    //         accelerator: 'CmdOrCtrl + Shift + E',
-    //         click: () => {
-    //             this.exportsRegions(this.mapBuilder.getLayers('polygon'));
-    //         }
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Load map',
-    //         type: 'normal',
-    //         click: () => {
-    //             mapio.loadMapfromFile((conf) => {
-    //                 this.addNewMap(conf);
-    //                 this.show();
-    //             });
-    //         }
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Crate map',
-    //         type: 'normal',
-    //         click: () => {
-    //             this.createMap();
-    //             this.show();
-    //         }
-    //     }));
-    //     // mapMenu.append(new MenuItem({
-    //     //     label: 'Edit map',
-    //     //     accelerator: 'CmdOrCtrl + L',
-    //     //     click: () => {
-    //     //         this.mapPane.toggleBottom();
-    //     //         this.show();
-    //     //     }
-    //     // }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Reload map',
-    //         click: () => {
-    //             this.mapBuilder.reload();
-    //             this.show();
-    //         }
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: '',
-    //         type: 'separator'
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Export current map',
-    //         click: () => {
-    //             mapio.saveAs(this.mapBuilder._configuration, (c, p, e) => {
-    //                 gui.notify(`${c.name} map saved in ${p}`);
-    //             }, (err) => {
-    //                 gui.notify(err);
-    //             });
-    //         }
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: '',
-    //         type: 'separator'
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Layers',
-    //         submenu: layer,
-    //         type: 'submenu'
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Regions',
-    //         submenu: region,
-    //         type: 'submenu'
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: '',
-    //         type: 'separator'
-    //     }));
-    //     mapMenu.append(new MenuItem({
-    //         label: 'Show map',
-    //         type: 'normal',
-    //         accelerator: 'CmdOrCtrl + M',
-    //         click: () => {
-    //             this.show();
-    //         }
-    //     }));
-    //     this.menu = new MenuItem({
-    //         label: "Maps",
-    //         type: "submenu",
-    //         submenu: mapMenu
-    //     });
-    //     gui.addSubMenu(this.menu);
-    // }
 
     deactivate() { /// the extension has to take care of removing all the buttons and element appended
         //this.sidebar.remove();
@@ -452,20 +355,9 @@ class MapExtension extends GuiExtension {
     }
 
 
-    // loadMap(path, cl) {
-    //     mapio.loadMap(path, (conf) => {
-    //         this.addNewMap(conf);
-    //         gui.notify(`map ${conf.name} added to workspace`);
-    //         this.show();
-    //         if (typeof cl === 'function') {
-    //             cl(conf);
-    //         }
-    //     });
-    // }
-
     //
     addNewMap(configuration) {
-        configuration.id = this._indx++;
+        configuration._id = this._indx++;
         try {
             this.mapBuilder.setConfiguration(configuration);
         } catch (e) {
@@ -496,7 +388,7 @@ class MapExtension extends GuiExtension {
             label: 'Export map',
             type: 'normal',
             click: () => {
-                mapio.saveAs(this.maps[configuration.id], (c, p, e) => {
+                mapio.saveAs(this.maps[configuration._id], (c, p, e) => {
                     gui.notify(`${c.name} map saved in ${p}`);
                 }, (err) => {
                     gui.notify(err);
@@ -511,64 +403,56 @@ class MapExtension extends GuiExtension {
                     title: 'Delete Map?',
                     type: 'warning',
                     buttons: ['No', "Yes"],
-                    message: `Delete map ${this.maps[configuration.id].name}? (no undo available)`,
+                    message: `Delete map ${this.maps[configuration._id].name}? (no undo available)`,
                     noLink: true
                 }, (id) => {
                     if (id > 0) {
                         if (configuration == this.mapBuilder.getConfiguration()) {
                             this.mapBuilder.clear();
                         }
-                        this.mapsList.removeItem(`${configuration.id}`);
-                        delete this.maps[configuration.id];
+                        this.mapsList.removeItem(`${configuration._id}`);
+                        delete this.maps[configuration._id];
                     }
                 });
 
             }
         }));
-
-
-        let tools = new Grid(2, 2);
-        tools.element.onclick = (e) => e.stopPropagation();
-        let numMaxZoom = input.input({
+        let tools = util.div();
+        let first = util.div();
+        let second = util.div();
+        tools.onclick = (e) => e.stopPropagation();
+        tools.appendChild(first);
+        tools.appendChild(second);
+        input.input({
+            label: 'Max. zoom: ',
+            parent: first,
             type: "number",
-            id: `numMaxZoom_${configuration.id}`,
+            className: 'form-control',
+            id: `numMaxZoom_${configuration._id}`,
             value: 0,
             min: "0",
             onchange: () => {
                 this.builder.setMaxZoom(Number(numMaxZoom.value));
             }
         });
-        let lblMaxZoom = document.createElement("label");
-        lblMaxZoom.htmlFor = `numMaxZoom_${configuration.id}`;
-        lblMaxZoom.innerHTML = "Max. zoom: ";
-        tools.addElement(lblMaxZoom, 0, 0);
-        tools.addElement(numMaxZoom, 0, 1);
-        let numMinZoom = input.input({
+        input.input({
             type: "number",
-            id: `numMinZoom_${configuration.id}`,
+            parent: second,
+            label: 'Min. zoom: ',
+            className: 'form-control',
+            id: `numMinZoom_${configuration._id}`,
             value: 0,
             min: "0",
             oninput: () => {
                 this.builder.setMinZoom(Number(numMinZoom.value));
             }
         });
-        let lblMinZoom = document.createElement("label");
-        lblMinZoom.htmlFor = `numMinZoom_${configuration.id}`;
-        lblMinZoom.innerHTML = "Min. zoom: ";
-        tools.addElement(lblMinZoom, 1, 0);
-        tools.addElement(numMinZoom, 1, 1);
 
         let title = document.createElement('STRONG');
         title.innerHTML = configuration.name;
 
-        /*let title = document.createElement('STRONG');
-        title.innerHTML = configuration.name;
-        title.oncontextmenu = () => {
-            ctn.popup();
-        }*/
-
         this.mapsList.addItem({
-            id: `${configuration.id}`,
+            id: configuration._id,
             title: title,
             key: `${configuration.name} ${configuration.date} ${configuration.authors}`,
             details: tools,
@@ -581,7 +465,7 @@ class MapExtension extends GuiExtension {
                 active: () => {
                     this.mapsList.deactiveAll();
                     this.mapsList.hideAllDetails();
-                    this.mapsList.showDetails(configuration.id);
+                    //this.mapsList.showDetails(configuration._id);
                     this.mapBuilder.setConfiguration(configuration);
                 },
                 deactive: () => {
@@ -590,11 +474,11 @@ class MapExtension extends GuiExtension {
             }
         });
 
-        this.maps[configuration.id] = configuration;
+        this.maps[configuration._id] = configuration;
         this.mapsList.deactiveAll();
         this.mapsList.hideAllDetails();
-        this.mapsList.activeItem(configuration.id);
-        this.mapsList.showDetails(configuration.id);
+        this.mapsList.activeItem(configuration._id);
+        //this.mapsList.showDetails(configuration._id);
         this.mapPane.show();
     }
 
@@ -646,8 +530,10 @@ class MapExtension extends GuiExtension {
             this._colors.map((col) => {
                 color.append(new MenuItem({
                     label: col,
+                    type: 'radio',
+                    checked: col === layerConfig.options.color && col === layerConfig.options.color,
                     click: () => {
-                        this.mapBuilder.setLayerStyle(configuration.name, {
+                        this.mapBuilder.setLayerStyle(layerConfig.name, {
                             color: col,
                             fillColor: col
                         }, where.name);
@@ -665,7 +551,7 @@ class MapExtension extends GuiExtension {
                     if (this.selectedRegions.length === 0) {
                         this.selectedRegions.push(e);
                     }
-                    this.deleteRegionsCheck(this.selectedRegions);
+                    this._deleteRegionsCheck(this.selectedRegions);
                     this.selectedRegions = [];
                 }
             }));
@@ -739,14 +625,14 @@ class MapExtension extends GuiExtension {
         context.append(new MenuItem({
             label: 'Edit details',
             click: () => {
-                this.editMarkerDetails(e);
+                this._editMarkerDetails(e);
             }
         }));
 
         context.append(new MenuItem({
             label: 'Delete',
             click: () => {
-                this.deleteMarkerCheck(e);
+                this._deleteMarkerCheck(e);
             }
         }));
 
@@ -767,7 +653,7 @@ class MapExtension extends GuiExtension {
                 txtTitle.value = layerConfig.name;
                 txtTitle.readOnly = true;
             },
-            ondblclick: (inp,event) => {
+            ondblclick: (inp, event) => {
                 event.stopPropagation();
                 txtTitle.readOnly = false;
             }
@@ -804,11 +690,11 @@ class MapExtension extends GuiExtension {
         });
 
         layer.on('dblclick', () => {
-            this.editMarkerDetails(e);
+            this._editMarkerDetails(e);
         });
     }
 
-    addListeners() {
+    _addListeners() {
         this.mapBuilder.on('error', (e) => {
             gui.notify(e.error);
         });
@@ -848,7 +734,7 @@ class MapExtension extends GuiExtension {
 
     }
 
-    editMarkerDetails(e) {
+    _editMarkerDetails(e) {
         let marker = e.layer;
         let configuration = e.configuration;
         // OPEN A MODAL ASKING FOR DETAILS.
@@ -894,7 +780,7 @@ class MapExtension extends GuiExtension {
             id: "SaveMarker00",
             text: "Save",
             action: () => {
-                this.sidebarRegions.markers.setKey(configuration.id, txtMarkerName.value);
+                this.sidebarRegions.markers.setKey(configuration._id, txtMarkerName.value);
                 this.mapBuilder.renameLayer(configuration.name, txtMarkerName.value, e.where.name);
                 configuration.details = taMarkerDetails.value;
                 marker.setTooltipContent(txtMarkerName.value);
@@ -911,7 +797,7 @@ class MapExtension extends GuiExtension {
         modal.show();
     }
 
-    deleteMarkerCheck(e) {
+    _deleteMarkerCheck(e) {
         dialog.showMessageBox({
             title: 'Delete selected marker?',
             type: 'warning',
@@ -926,7 +812,7 @@ class MapExtension extends GuiExtension {
         });
     }
 
-    deleteRegionsCheck(regions) {
+    _deleteRegionsCheck(regions) {
         dialog.showMessageBox({
             title: 'Delete selected regions?',
             type: 'warning',
@@ -974,134 +860,127 @@ class MapExtension extends GuiExtension {
             fs.writeFile(filename, cont);
         });
     }
-    //
-    //
-    // createMap() {
-    //     mapio.createMap((c) => {
-    //         this.addNewMap(c);
-    //     });
-    // }
-    //
-    // openLayerFile() {
-    //     if (Object.keys(this.maps).length <= 0) return;
-    //     dialog.showOpenDialog({
-    //         title: 'Add a new layer',
-    //         filters: [{
-    //             name: 'Configuration',
-    //             extensions: ['json', 'mapconfig']
-    //         }, {
-    //             name: 'Images',
-    //             extensions: ['jpg', 'png', 'gif', 'tiff', 'tif']
-    //         }, {
-    //             name: 'CSV',
-    //             extensions: ['csv']
-    //         }],
-    //         properties: ['openFile']
-    //     }, (filenames) => {
-    //         if (filenames.length === 0) return;
-    //         fs.stat(filenames[0], (err, stats) => {
-    //             if (err) return;
-    //             if (stats.isFile()) {
-    //                 dialog.showMessageBox({
-    //                     title: 'Add Layer?',
-    //                     type: 'warning',
-    //                     buttons: ['No', "Yes"],
-    //                     message: `Add layer from  ${filenames[0]} to map ${this.mapBuilder._configuration.name} ?`,
-    //                     noLink: true
-    //                 }, (id) => {
-    //                     if (id > 0) {
-    //                         this.addLayerFile(filenames[0]);
-    //                     }
-    //                 });
-    //             }
-    //         });
-    //     });
-    // }
-    //
-    // addLayerFile(path, options) {
-    //     options = options || {};
-    //     if (path.endsWith('.json') || path.endsWith('.mapconfig')) {
-    //         let conf = util.readJSONsync(path);
-    //         if (!conf) return;
-    //         let key = conf.name || conf.alias || path;
-    //         conf.basePath = mapio.basePath(conf, path);
-    //         this.mapBuilder._configuration.layers[key] = mapio.parseLayerConfig(conf);
-    //         this.mapBuilder.addLayer(this.mapBuilder._configuration.layers[key], key);
-    //     } else if (path.endsWith('.jpg') || path.endsWith('.JPG') || path.endsWith('.png') || path.endsWith('.gif')) {
-    //         var dim = sizeOf(path);
-    //         let siz = Math.max(dim.height, dim.width);
-    //         this.addLayer({
-    //             name: `tilesLayer from ${path}`,
-    //             tilesUrlTemplate: `${path}`,
-    //             basePath: '',
-    //             source: 'local',
-    //             original_size: siz,
-    //             maxZoom: 8,
-    //             baseLayer: !this.mapBuilder._state.baseLayerOn,
-    //             author: 'unknown',
-    //             type: 'tilesLayer',
-    //             opacity: 0.8,
-    //             tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-    //             bounds: [
-    //                 [-Math.floor(dim.height * 256 / siz), 0],
-    //                 [0, Math.floor(dim.width * 256 / siz)]
-    //             ],
-    //             size: 256
-    //         });
-    //
-    //
-    //     } else if (path.endsWith('.csv')) {
-    //         this.addLayer({
-    //             name: path,
-    //             alias: `pointsLayer from ${path}`,
-    //             author: 'unknow',
-    //             type: 'pointsLayer',
-    //             tiles_format: 'csv',
-    //             pointsUrlTemplate: path,
-    //             tileSize: this.mapBuilder._configuration.size || 256,
-    //             size: this.mapBuilder._configuration.size || 256,
-    //             maxNativeZoom: 0,
-    //             maxZoom: 8
-    //         });
-    //
-    //
-    //     } else if (path.endsWith('.tiff') || path.endsWith('.tif')) { //convert it to png and use it
-    //         var converter = new ConvertTiff({
-    //             prefix: 'slice'
-    //         });
-    //
-    //         converter.progress = (converted, total) => {
-    //             var dim = sizeOf(`${converted[0].target}\/slice1.png`);
-    //             let siz = Math.max(dim.height, dim.width);
-    //             this.addLayer({
-    //                 type: `tilesLayer`,
-    //                 tilesUrlTemplate: `${converted[0].target}\/slice{t}.png`,
-    //                 customKeys: {
-    //                     "t": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    //                 },
-    //                 name: path,
-    //                 baseLayer: true,
-    //                 alias: `tilesLayer from ${path}`,
-    //                 author: 'unknow',
-    //                 tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-    //                 maxNativeZoom: 0,
-    //                 maxZoom: 8
-    //             });
-    //             gui.notify(`${path} added`);
-    //             util.notifyOS(`"${path} added"`);
-    //         }
-    //         gui.notify(`${path} started conversion`);
-    //         converter.convertArray([path], mapio.basePath(null, path));
-    //     }
-    // }
-    //
-    //
-    // addLayer(conf) {
-    //     conf = mapio.parseLayerConfig(conf);
-    //     let key = conf.name || conf.alias || conf.id || conf.type;
-    //     this.mapBuilder.getConfiguration().layers[key] = conf;
-    //     this.mapBuilder.reload();
-    // }
+
+
+    createMap() {
+        this.addNewMap(mapio.baseConfiguration());
+    }
+
+
+    openLayerFile() {
+        if (Object.keys(this.maps).length <= 0) return;
+        dialog.showOpenDialog({
+            title: 'Add a new layer',
+            filters: [{
+                name: 'Configuration',
+                extensions: ['json', 'mapconfig']
+            }, {
+                name: 'Images',
+                extensions: ['jpg', 'png', 'gif', 'tiff', 'tif']
+            }, {
+                name: 'CSV',
+                extensions: ['csv']
+            }],
+            properties: ['openFile']
+        }, (filenames) => {
+            if (filenames.length === 0) return;
+            fs.stat(filenames[0], (err, stats) => {
+                if (err) return;
+                if (stats.isFile()) {
+                    dialog.showMessageBox({
+                        title: 'Add Layer?',
+                        type: 'warning',
+                        buttons: ['No', "Yes"],
+                        message: `Add layer from  ${filenames[0]} to map ${this.mapBuilder._configuration.name} ?`,
+                        noLink: true
+                    }, (id) => {
+                        if (id > 0) {
+                            this.addLayerFile(filenames[0]);
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    addLayerFile(path, options) {
+        options = options || {};
+        if (path.endsWith('.json')) {
+            let conf = util.readJSONsync(path);
+            if (!conf) return;
+            conf.basePath = mapio.basePath(conf, path);
+            conf = mapio.parseLayer(conf);
+            this.addLayer(conf);
+        } else if (path.endsWith('.jpg') || path.endsWith('.JPG') || path.endsWith('.png') || path.endsWith('.gif')) {
+            var dim = sizeOf(path);
+            let siz = Math.max(dim.height, dim.width);
+            this.addLayer({
+                name: path,
+                tilesUrlTemplate: `${path}`,
+                maxZoom: 8,
+                author: 'unknown',
+                type: 'tileLayer',
+                opacity: 0.8,
+                tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+                bounds: [
+                    [-Math.floor(dim.height * 256 / siz), 0],
+                    [0, Math.floor(dim.width * 256 / siz)]
+                ],
+                size: 256
+            });
+        } else if (path.endsWith('.csv')) {
+            // this.addLayer({
+            //     name: path,
+            //     author: 'unknow',
+            //     type: 'pointsLayer',
+            //     tiles_format: 'csv',
+            //     pointsUrlTemplate: path,
+            //     tileSize: this.mapBuilder.getSize() || 256,
+            //     size: this.mapBuilder.getSize() || 256,
+            //     maxNativeZoom: 0,
+            //     maxZoom: 8
+            // });
+        } else if (path.endsWith('.tiff') || path.endsWith('.tif')) { //convert it to png and use it
+            var converter = new ConvertTiff({
+                prefix: 'slice'
+            });
+
+            converter.progress = (converted, total) => {
+                var dim = sizeOf(`${converted[0].target}\/slice1.png`);
+                let siz = Math.max(dim.height, dim.width);
+                this.addLayer({
+                    type: `tileLayer`,
+                    tilesUrlTemplate: `${converted[0].target}\/slice{t}.png`,
+                    options: {
+                        customKeys: {
+                            "t": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                        },
+                        t: 1,
+                        tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+                        bounds: [
+                            [-Math.floor(dim.height * 256 / siz), 0],
+                            [0, Math.floor(dim.width * 256 / siz)]
+                        ],
+                        maxNativeZoom: 0,
+                        maxZoom: 8
+                    },
+                    name: path,
+                    baseLayer: true,
+                    author: 'unknow'
+                });
+                gui.notify(`${path} added`);
+                util.notifyOS(`"${path} added"`);
+            }
+            gui.notify(`${path} started conversion`);
+            converter.convertArray([path], mapio.basePath(null, path));
+        }
+    }
+
+
+    addLayer(conf) {
+        conf = mapio.parseLayer(conf);
+        this.mapBuilder.addLayer(conf);
+    }
 
 
 

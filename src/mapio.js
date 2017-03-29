@@ -88,16 +88,14 @@ function loadMapfromFile(cl) {
     });
 }
 
-function baseConfiguration(options) {
-    options = options || {};
+function baseConfiguration() {
     return {
         type: 'map',
         name: 'new map',
         authors: os.userInfo().username,
         date: (new Date()).toDateString(),
         layers: {},
-        basePath: '',
-        new: options.new
+        basePath: ''
     };
 }
 
@@ -211,7 +209,11 @@ function parseMap(configuration) {
                     let c = findConfigurationSync(configuration.basePath + alls[a][lay] + path.sep, alls[a][lay]);
                     c.basePath = c.basePath || (configuration.basePath + alls[a][lay] + path.sep);
                     c.name = c.name || `${c.type}_${indx++}`;
-                    configuration.layers[c.name] = parseLayer(c);
+                    if (configuration.type === 'pointsLayer' || configuration.type === 'pixelsLayer') {
+                        configuration.data[c.name] = parseLayer(c);
+                    } else {
+                        configuration.layers[c.name] = parseLayer(c);
+                    }
                 } catch (e) {
                     throw e;
                 }
@@ -345,15 +347,15 @@ function parseLayer(config) {
     if (config.type.includes('polygons')) {
         config.type = 'featureGroup';
         config.layers = config.polygons;
-        Object.keys(config.layers).map((key)=>{
-          config.layers[key].type = config.layers[key].type || 'polygon';
+        Object.keys(config.layers).map((key) => {
+            config.layers[key].type = config.layers[key].type || 'polygon';
         });
     }
     if (config.type.includes('drawnMarkers')) {
         config.type = 'featureGroup';
         config.layers = config.markers;
-        Object.keys(config.layers).map((key)=>{
-          config.layers[key].type = config.layers[key].type || 'marker';
+        Object.keys(config.layers).map((key) => {
+            config.layers[key].type = config.layers[key].type || 'marker';
         });
     }
     //delete config.basePath; //because we joined all in the path
@@ -438,9 +440,13 @@ function exportConfiguration(configuration, dir, cl) {
 
 
 
+
+
 exports.exportConfiguration = exportConfiguration;
 exports.saveAs = saveAs;
 exports.parseLayer = parseLayer;
 exports.parseMap = parseMap;
 exports.loadMap = loadMap;
 exports.loadMapFile = loadMapfromFile;
+exports.baseConfiguration = baseConfiguration;
+exports.basePath = basePath;

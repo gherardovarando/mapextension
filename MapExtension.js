@@ -321,10 +321,11 @@ class MapExtension extends GuiExtension {
                 gui.notify('loading maps from workspace...');
                 this.mapBuilder.clear();
                 this.mapsList.clean();
-                this.maps = gui.workspace.getSpace(this) || {};
+                this.maps = {};
+                let maps = gui.workspace.getSpace(this) || {};
                 let tot = 0;
-                Object.keys(this.maps).map((id, i) => {
-                    this.addNewMap(mapio.parseMap(this.maps[id]));
+                Object.keys(maps).map((id, i) => {
+                    this.addNewMap(mapio.parseMap(maps[id]));
                     tot++;
                 });
                 gui.workspace.addSpace(this, this.maps, true); //overwriting
@@ -335,6 +336,8 @@ class MapExtension extends GuiExtension {
             //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of mapPage
             if (gui.workspace.spaces.MapExtension) {
                 this.mapBuilder.clear();
+                this.mapsList.clean();
+                this.maps = {};
                 let maps = gui.workspace.getSpace(this);
                 Object.keys(maps).map((id) => {
                     this.addNewMap(mapio.parseMap(maps[id]));
@@ -418,6 +421,13 @@ class MapExtension extends GuiExtension {
 
             }
         }));
+        ctn.append(new MenuItem({
+            label: 'Edit zoom',
+            type: 'normal',
+            click: () => {
+                this.mapsList.showDetails(configuration._id);
+            }
+        }));
         let tools = util.div();
         let first = util.div();
         let second = util.div();
@@ -428,24 +438,24 @@ class MapExtension extends GuiExtension {
             label: 'Max. zoom: ',
             parent: first,
             type: "number",
-            className: 'form-control',
+            className: 'list-input',
             id: `numMaxZoom_${configuration._id}`,
             value: 0,
-            min: "0",
-            onchange: () => {
-                this.builder.setMaxZoom(Number(numMaxZoom.value));
+            min: 0,
+            onchange: (inp) => {
+                this.mapBuilder.setMaxZoom(Number(inp.value));
             }
         });
         input.input({
             type: "number",
             parent: second,
             label: 'Min. zoom: ',
-            className: 'form-control',
+            className: 'list-input',
             id: `numMinZoom_${configuration._id}`,
             value: 0,
-            min: "0",
-            oninput: () => {
-                this.builder.setMinZoom(Number(numMinZoom.value));
+            max: 0,
+            oninput: (inp) => {
+                this.mapBuilder.setMinZoom(Number(inp.value));
             }
         });
 

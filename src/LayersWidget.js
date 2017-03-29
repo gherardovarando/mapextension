@@ -254,6 +254,25 @@ class LayersWidget {
             this._addToList(layer, customMenuItems, tools, configuration, this.overlaylist);
         });
 
+        this.mapManager.on('load:imagelayer', (e) => {
+            let configuration = e.configuration;
+            let layer = e.layer;
+
+            let tools = this.createToolbox(layer, configuration, {
+                opacity: true
+            });
+            let customMenuItems = [];
+            let deleteMenuItem = new MenuItem({
+                label: 'Delete',
+                click: () => {
+                    this.mapManager.removeLayer(configuration.name);
+                }
+            });
+            customMenuItems.push(deleteMenuItem);
+
+            this._addToList(layer, customMenuItems, tools, configuration, this.tileslist);
+        });
+
 
         this.mapManager.on('load:featuregroup', (e) => {
             let configuration = e.configuration;

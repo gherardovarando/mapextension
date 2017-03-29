@@ -759,7 +759,7 @@ class MapExtension extends GuiExtension {
             onchange: () => {
                 this.sidebarRegions.markers.setKey(layerConfig.id, txtTitle.value);
                 this.sidebarRegions.markers.setTitle(layerConfig.id, txtTitle.value);
-                layerConfig.name = txtTitle.value;
+                this.mapBuilder.renameLayer(layerConfig.name, txtTitle.value, where.name);
                 layer.setTooltipContent(txtTitle.value);
                 txtTitle.readOnly = true;
             },
@@ -767,7 +767,7 @@ class MapExtension extends GuiExtension {
                 txtTitle.value = layerConfig.name;
                 txtTitle.readOnly = true;
             },
-            ondblclick: (event) => {
+            ondblclick: (inp,event) => {
                 event.stopPropagation();
                 txtTitle.readOnly = false;
             }
@@ -895,7 +895,7 @@ class MapExtension extends GuiExtension {
             text: "Save",
             action: () => {
                 this.sidebarRegions.markers.setKey(configuration.id, txtMarkerName.value);
-                configuration.name = txtMarkerName.value;
+                this.mapBuilder.renameLayer(configuration.name, txtMarkerName.value, e.where.name);
                 configuration.details = taMarkerDetails.value;
                 marker.setTooltipContent(txtMarkerName.value);
                 marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);

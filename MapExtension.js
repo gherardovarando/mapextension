@@ -189,6 +189,9 @@ class MapExtension extends GuiExtension {
         this._colors = ['blue', 'red', 'pink', 'orange', 'yellow', 'green', 'purple', 'black', 'white'];
         this.selectedRegions = [];
         this.maps = {};
+        this.regions = {};
+        this.markers = {};
+        this.activeMap = null;
         this._indx = 0;
     }
 
@@ -439,7 +442,7 @@ class MapExtension extends GuiExtension {
             label: 'Max. zoom: ',
             parent: first,
             type: "number",
-            className: 'list-input',
+            className: 'form-control',
             id: `numMaxZoom_${configuration._id}`,
             value: 0,
             min: 0,
@@ -451,7 +454,7 @@ class MapExtension extends GuiExtension {
             type: "number",
             parent: second,
             label: 'Min. zoom: ',
-            className: 'list-input',
+            className: 'form-conrol',
             id: `numMinZoom_${configuration._id}`,
             value: 0,
             max: 0,
@@ -498,6 +501,7 @@ class MapExtension extends GuiExtension {
         let layer = e.layer;
         let layerConfig = e.configuration;
         let where = e.where;
+        this.regions[layerConfig._id] = layerConfig;
         layer.on('click', () => {
             if (!this.sidebarRegions.list.items[layerConfig._id].element.className.includes('active')) {
                 this.sidebarRegions.list.activeItem(layerConfig._id);
@@ -594,19 +598,17 @@ class MapExtension extends GuiExtension {
         inp.placeholder = 'Region name';
         inp.value = layerConfig.name;
         inp.size = layerConfig.name.length + 1;
-        let c = document.createElement('STRONG');
-        c.appendChild(inp);
-        c.oncontextmenu = (event) => {
-            context.popup();
-        }
         layer.on('contextmenu', () => {
             context.popup();
         })
         this.sidebarRegions.addItem({
             id: layerConfig._id,
-            title: c,
+            title: inp,
             key: layerConfig.name,
             toggle: true,
+            oncontextmenu: () => {
+                context.popup();
+            },
             onclick: {
                 active: () => {
                     this.mapBuilder._l.setView(layer.getLatLngs()[0][0]);
@@ -633,6 +635,34 @@ class MapExtension extends GuiExtension {
         let where = e.where;
 
         let context = new Menu();
+        this.markers[layerConfig._id] = layerConfig;
+
+        let title = input.input({
+            type: `text`,
+            id: `txtmarker_${layerConfig._id}`,
+            value: layerConfig.name,
+            className: `list-input`,
+            readOnly: true,
+            onchange: (inp) => {
+                this.sidebarRegions.markers.setKey(layerConfig._id, inp.value);
+                //this.sidebarRegions.markers.setTitle(layerConfig.id, title.value);
+                this.mapBuilder.renameLayer(layerConfig.name, inp.value, where.name);
+
+                inp.readOnly = true;
+            },
+            onblur: () => {
+                title.value = layerConfig.name;
+                title.readOnly = true;
+            }
+        });
+        title.size = layerConfig.name.length + 1;
+
+        context.append(new MenuItem({
+            label: 'Rename',
+            click: () => {
+                title.readOnly = false;
+            }
+        }));
 
         context.append(new MenuItem({
             label: 'Edit details',
@@ -648,41 +678,15 @@ class MapExtension extends GuiExtension {
             }
         }));
 
-        let txtTitle = input.input({
-            type: `text`,
-            id: `txtmarker_${layerConfig.id}`,
-            value: layerConfig.name,
-            className: `list-input`,
-            readOnly: true,
-            onchange: () => {
-                this.sidebarRegions.markers.setKey(layerConfig.id, txtTitle.value);
-                this.sidebarRegions.markers.setTitle(layerConfig.id, txtTitle.value);
-                this.mapBuilder.renameLayer(layerConfig.name, txtTitle.value, where.name);
-                layer.setTooltipContent(txtTitle.value);
-                txtTitle.readOnly = true;
-            },
-            onblur: () => {
-                txtTitle.value = layerConfig.name;
-                txtTitle.readOnly = true;
-            },
-            ondblclick: (inp, event) => {
-                event.stopPropagation();
-                txtTitle.readOnly = false;
-            }
-        });
-        txtTitle.size = layerConfig.name.length + 1;
-        txtTitle.oncontextmenu = () => {
-            context.popup();
-        };
-
-        let title = document.createElement('STRONG');
-        title.appendChild(txtTitle);
 
         this.sidebarRegions.markers.addItem({
             id: layerConfig._id,
             title: title,
             key: layerConfig.name,
             toggle: true,
+            oncontextmenu: () => {
+                context.popup();
+            },
             onclick: {
                 active: () => {
                     this.sidebarRegions.markers.deactiveAll();
@@ -697,7 +701,7 @@ class MapExtension extends GuiExtension {
 
         layer.on('click', () => {
             this.sidebarRegions.markers.deactiveAll();
-            this.sidebarRegions.markers.activeItem(layerConfig.id);
+            this.sidebarRegions.markers.activeItem(layerConfig._id);
             this.mapBuilder.map.setView(layer.getLatLng());
         });
 
@@ -716,15 +720,50 @@ class MapExtension extends GuiExtension {
             this.sidebarRegions.list.clean();
             this.sidebarRegions.markers.clean();
             this.selectedRegions = [];
+            this.regions = {};
+            this.markers = {};
         });
 
-        this.mapBuilder.on('reload', () => {});
+
+        this.mapBuilder.on('rename:layer', (e) => {
+            let type = e.configuration.type;
+            let configuration = e.configuration;
+            if (type === 'polygon' || type === 'rectangle') {
+                this.sidebarRegions.list.setTitle(configuration._id, configuration.name);
+                this.regions[configuration._id].name = configuration.name;
+            }
+            if (type === 'marker') {
+                this.sidebarRegions.markers.setTitle(configuration._id, configuration.name);
+                this.markers[configuration._id].name = configuration.name;
+            }
+        });
+
+        this.mapBuilder.on('update:layer', (e) => {
+            let type = e.configuration.type;
+            let configuration = e.configuration;
+
+            if (type === 'polygon' || type === 'rectangle') {
+                this.sidebarRegions.list.setTitle(configuration._id, configuration.name);
+                layer.setTooltipContent(configuration.name);
+                this.regions[configuration._id] = configuration;
+            }
+            if (type === 'marker') {
+                this.sidebarRegions.markers.setTitle(configuration._id, configuration.name);
+                layer.setTooltipContent(configuration.name);
+                this.markers[configuration._id] = configuration;
+            }
+        });
+
+        this.mapBuilder.on('set:configuration', (e) => {
+            this.activeMap = e.configuration
+        });
 
         this.mapBuilder.on('remove:layer', (e) => {
             let configuration = e.configuration;
             let type = e.configuration.type;
             if (type === 'polygon' || type === 'rectangle') {
                 this.sidebarRegions.list.removeItem(configuration._id);
+                delete this.regions[configuration._id];
             }
             if (type === 'marker') {
                 this.sidebarRegions.markers.removeItem(configuration._id);
@@ -759,13 +798,10 @@ class MapExtension extends GuiExtension {
 
         let txtMarkerName = input.input({
             type: "text",
-            id: "txtmarkername",
-            value: configuration.name
+            id: `txtMarkerName_${configuration._id}_modal`,
+            value: configuration.name,
+            label: 'Marker name'
         });
-        let lblMarkerName = document.createElement("LABEL");
-        lblMarkerName.htmlFor = "txtmarkername";
-        lblMarkerName.innerHTML = "Marker name: ";
-        grid.addElement(lblMarkerName, 0, 0);
         grid.addElement(txtMarkerName, 0, 1);
 
         let taMarkerDetails = document.createElement("TEXTAREA");

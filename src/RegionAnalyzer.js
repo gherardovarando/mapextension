@@ -32,6 +32,8 @@ const {
 const {
     ipcRenderer
 } = require('electron');
+const pixels = require('./pixelsData.js');
+const points = require('./pointsData.js');
 
 
 /**

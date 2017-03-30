@@ -23,7 +23,7 @@ const http = require('http');
 const Baby = require("babyparse");
 const fs = require("fs");
 
-class pointsLayer {
+class pointsData {
 
     constructor(configuration) {
         this.configuration = configuration;
@@ -66,7 +66,7 @@ class pointsLayer {
     }
 
     isRemote() {
-        if (typeof module == 'undefined' || !module.exports){
+        if (typeof module == 'undefined' || !module.exports) {
 
         }
         if (typeof this.configuration.source === 'string') {
@@ -271,38 +271,38 @@ class pointsLayer {
                 //     xhr.open("GET", url, true);
                 //     xhr.send();
                 // } else {
-                    http.get(url, (res) => {
-                        const statusCode = res.statusCode;
-                        const contentType = res.headers['content-type'];
-                        let err;
-                        if (statusCode !== 200) {
-                            err = new Error(`Request Failed.\n` +
-                                `Status Code: ${statusCode}`);
+                http.get(url, (res) => {
+                    const statusCode = res.statusCode;
+                    const contentType = res.headers['content-type'];
+                    let err;
+                    if (statusCode !== 200) {
+                        err = new Error(`Request Failed.\n` +
+                            `Status Code: ${statusCode}`);
+                    }
+                    if (err) {
+                        if (typeof error === 'function') {
+                            error(err);
                         }
-                        if (err) {
+                        // consume response data to free up memory
+                        res.resume();
+                        return;
+                    }
+                    res.setEncoding('utf8');
+                    let rawData = '';
+                    res.on('data', (chunk) => rawData += chunk);
+                    res.on('end', () => {
+                        try {
+                            bParse(rawData);
+                        } catch (e) {
                             if (typeof error === 'function') {
-                                error(err);
+                                error(e);
                             }
-                            // consume response data to free up memory
-                            res.resume();
-                            return;
                         }
-                        res.setEncoding('utf8');
-                        let rawData = '';
-                        res.on('data', (chunk) => rawData += chunk);
-                        res.on('end', () => {
-                            try {
-                                bParse(rawData);
-                            } catch (e) {
-                                if (typeof error === 'function') {
-                                    error(e);
-                                }
-                            }
-                        });
-                    }).on('error', (e) => {
-                        error(e);
                     });
-              //  }
+                }).on('error', (e) => {
+                    error(e);
+                });
+                //  }
             } else {
                 fs.readFile(url, (err, data) => {
                     if (err) {
@@ -327,9 +327,9 @@ class pointsLayer {
 
 //export as node module
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = pointsLayer;
+    module.exports = pointsData;
 }
 // ...or as browser global
 else {
-    global.pointsLayer = pointsLayer;
+    global.pointsData = pointsData;
 }

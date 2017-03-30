@@ -23,7 +23,7 @@ const Baby = require("babyparse");
 const fs = require("fs");
 const http = require('http');
 
-class pixelsLayer {
+class pixelsData {
 
     constructor(configuration) {
         this.configuration = configuration;
@@ -340,9 +340,9 @@ class pixelsLayer {
 
 //export as node module
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = pixelsLayer;
+    module.exports = pixelsData;
 }
 // ...or as browser global
 else {
-    global.pixelsLayer = pixelsLayer;
+    global.pixelsData = pixelsData;
 }

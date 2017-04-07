@@ -42,7 +42,7 @@ const ConvertTiff = require('tiff-to-png');
 const json2csv = require('json2csv');
 const fs = require('fs');
 const mapio = require('./src/mapio.js');
-const LayersWidget = require('./src/LayersWidget.js');
+const LayersControl = require('./src/LayersControl.js');
 
 const leaflet = require('leaflet');
 const leafletMarkerCluster = require('leaflet.markercluster');
@@ -62,43 +62,7 @@ const {
 } = require('electron').remote;
 const icon = 'fa fa-map';
 
-let options = {
-    map: {
-        minZoom: 0,
-        zoomSnap: 1,
-        zoomDelta: 1,
-        crs: L.CRS.Simple,
-        zoomControl: false
-    },
-    builder: {
-        dev: true,
-        controls: {
-            draw: {
-                position: 'bottomleft',
-                draw: {
-                    polyline: false,
-                    marker: true,
-                    polygon: true,
-                    rectangle: true,
-                    circle: false
-                },
-                edit: true
-            },
-            zoom: {
-                position: 'topright'
-            },
-            layers: () => {}
-        },
-        tooltip: {
-            polygon: true,
-            rectangle: true,
-            marker: true
-        },
-        popup: {
-            marker: true
-        }
-    }
-}
+
 
 
 class MapExtension extends GuiExtension {
@@ -108,83 +72,73 @@ class MapExtension extends GuiExtension {
             icon: icon,
             menuLabel: 'Maps',
             menuTemplate: [{
-                    label: 'Show',
-                    click: () => this.show()
-                },
-                {
-                    label: 'Reload map',
-                    click: () => {
-                        if (this.mapBuilder instanceof L.MapBuilder) {
-                            this.mapBuilder.reload();
-                        }
+                label: 'Show',
+                click: () => this.show()
+            }, {
+                label: 'Reload map',
+                click: () => {
+                    if (this.mapBuilder instanceof L.MapBuilder) {
+                        this.mapBuilder.reload();
                     }
-                },
-                {
-                    type: 'separator'
-                },
-                {
-                    label: 'Load map',
+                }
+            }, {
+                type: 'separator'
+            }, {
+                label: 'Load map',
+                click: () => {
+                    mapio.loadMapFile((conf) => {
+                        this.addNewMap(conf);
+                    });
+                }
+            }, {
+                label: 'Create map',
+                click: () => {
+                    this.createMap();
+                }
+            }, {
+                label: 'Export map',
+                click: () => {
+                    mapio.saveAs(this.mapBuilder.getConfiguration(), (c, p, e) => {
+                        gui.notify(`${c.name} map saved in ${p}`);
+                    }, (err) => {
+                        gui.notify(err);
+                    });
+                }
+            }, {
+                type: 'separator'
+            }, {
+                label: 'Add layer',
+                type: 'submenu',
+                submenu: [{
+                    label: 'File'
+                }, {
+                    label: 'Tile'
+                }, {
+                    label: 'Image'
+                }, {
+                    label: 'Guide'
+                }]
+            }, {
+                label: 'Regions',
+                type: 'submenu',
+                submenu: [{
+                    label: 'Delete',
                     click: () => {
-                        mapio.loadMapFile((conf) => {
-                            this.addNewMap(conf);
-                        });
-                    }
-                },
-                {
-                    label: 'Create map',
-                    click: () => {
-                        this.createMap();
+                        this._deleteRegionsCheck(this.selectedRegions);
+                        this.selectedRegions = [];
                     }
                 }, {
-                    label: 'Export map',
+                    label: 'Export',
                     click: () => {
-                        mapio.saveAs(this.mapBuilder.getConfiguration(), (c, p, e) => {
-                            gui.notify(`${c.name} map saved in ${p}`);
-                        }, (err) => {
-                            gui.notify(err);
-                        });
+
                     }
-                },
-                {
-                    type: 'separator'
-                },
-                {
-                    label: 'Add layer',
-                    type: 'submenu',
-                    submenu: [{
-                            label: 'File'
-                        },
-                        {
-                            label: 'Tile'
-                        }, {
-                            label: 'Image'
-                        }, {
-                            label: 'Guide'
-                        }
-                    ]
-                },
-                {
-                    label: 'Regions',
-                    type: 'submenu',
-                    submenu: [{
-                        label: 'Delete',
-                        click: () => {
-                            this._deleteRegionsCheck(this.selectedRegions);
-                            this.selectedRegions = [];
-                        }
-                    }, {
-                        label: 'Export',
-                        click: () => {
+                }, {
+                    label: 'Compute',
+                    click: () => {
 
-                        }
-                    }, {
-                        label: 'Compute',
-                        click: () => {
-
-                        }
-                    }]
-                }
-            ]
+                    }
+                }]
+            }]
         });
         this._colors = ['blue', 'red', 'pink', 'orange', 'yellow', 'green', 'purple', 'black', 'white'];
         this.selectedRegions = [];
@@ -193,6 +147,7 @@ class MapExtension extends GuiExtension {
         this.markers = {};
         this.activeMap = null;
         this._indx = 0;
+        this._indx2 = 0;
     }
 
     activate() {
@@ -209,8 +164,72 @@ class MapExtension extends GuiExtension {
         });
         let flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
 
-        this.layersContainer = new LayersWidget();
-        flexLayout.appendToLastContainer(this.layersContainer.element);
+        this.layersControl = new LayersControl();
+        let options = {
+            map: {
+                minZoom: 0,
+                zoomSnap: 1,
+                zoomDelta: 1,
+                crs: L.CRS.Simple,
+                zoomControl: false
+            },
+            builder: {
+                dev: true,
+                controls: {
+                    draw: {
+                        position: 'bottomleft',
+                        draw: {
+                            polyline: false,
+                            marker: true,
+                            polygon: {
+                                allowIntersection: false,
+                                shapeOptions: {
+                                    stroke: true,
+                                    color: "#ed8414",
+                                    weight: 4,
+                                    opacity: 1,
+                                    fill: true,
+                                    fillColor: null, //same as color by default
+                                    fillOpacity: 0.5,
+                                    clickable: true
+                                }
+                            },
+                            rectangle: {
+                                shapeOptions: {
+                                    stroke: true,
+                                    color: "#ed8414",
+                                    weight: 4,
+                                    opacity: 1,
+                                    fill: true,
+                                    fillColor: null, //same as color by default
+                                    fillOpacity: 0.5,
+                                    clickable: true
+                                }
+                            },
+                            circle: false
+                        },
+                        edit: {
+                            allowIntersection: false
+                        }
+                    },
+                    zoom: {
+                        position: 'topright'
+                    },
+                    layers: (layer, configuration, map) => {
+                        this.layersControl.addLayer(layer, configuration, map);
+                    }
+                },
+                tooltip: {
+                    polygon: true,
+                    rectangle: true,
+                    marker: true
+                },
+                popup: {
+                    marker: true
+                }
+            }
+        }
+        flexLayout.appendToLastContainer(this.layersControl.element);
         this.sidebar.show();
 
         let mapsListContainer = util.div();
@@ -272,48 +291,39 @@ class MapExtension extends GuiExtension {
         mapCont.id = options.id || 'map';
         this.mapPane.top.appendChild(mapCont);
         let map = L.map(options.id || 'map', options.map);
+        this.map = map;
         this.mapBuilder = new L.MapBuilder(map, options.builder);
-        this.layersContainer.setMapManager(this.mapBuilder);
-        // globalShortcut.register('CmdOrCtrl+Up', () => {
-        //     this.mapBuilder.tUP();
-        // });
-        // globalShortcut.register('CmdOrCtrl+Down', () => {
-        //     this.mapBuilder.tDOWN();
-        // });
-        this.sidebarRegions = new Sidebar(this.element, {
+        this.layersControl.setMapManager(this.mapBuilder);
+        this.sidebarOverlay = new Sidebar(this.element, {
             className: 'pane-sm scrollable'
         });
-        this.sidebarRegions.show();
-        this.sidebarRegionsTabGroup = new TabGroup(this.sidebarRegions);
-        this.sidebarRegionsTabGroup.addItem({
+        this.sidebarOverlay.show();
+        this.sidebarOverlayTabGroup = new TabGroup(this.sidebarOverlay);
+        this.sidebarOverlayTabGroup.addItem({
             id: `regions`,
             name: `Regions`
         });
-
-        this.sidebarRegionsTabGroup.addItem({
+        this.sidebarOverlayTabGroup.addItem({
             id: `markers`,
             name: `Markers`
         });
-
-        this.sidebarRegions.addList();
-        this.sidebarRegions.list.addSearch({
+        this.sidebarOverlay.addList('regions');
+        this.sidebarOverlay.regions.addSearch({
             placeholder: 'Search regions'
         });
 
-        this.sidebarRegions.addList(`markers`);
-        this.sidebarRegions.markers.hide();
-        this.sidebarRegions.markers.addSearch({
+        this.sidebarOverlay.addList(`markers`);
+        this.sidebarOverlay.markers.hide();
+        this.sidebarOverlay.markers.addSearch({
             placeholder: 'Search markers'
         });
-
-        this.sidebarRegionsTabGroup.addClickListener(`regions`, () => {
-            this.sidebarRegions.list.show();
-            this.sidebarRegions.markers.hide();
+        this.sidebarOverlayTabGroup.addClickListener(`regions`, () => {
+            this.sidebarOverlay.regions.show();
+            this.sidebarOverlay.markers.hide();
         });
-
-        this.sidebarRegionsTabGroup.addClickListener(`markers`, () => {
-            this.sidebarRegions.markers.show();
-            this.sidebarRegions.list.hide();
+        this.sidebarOverlayTabGroup.addClickListener(`markers`, () => {
+            this.sidebarOverlay.markers.show();
+            this.sidebarOverlay.regions.hide();
         });
         //this.regionAnalyzer = new RegionAnalyzer();
         this._addListeners();
@@ -335,8 +345,6 @@ class MapExtension extends GuiExtension {
                 gui.workspace.addSpace(this, this.maps, true); //overwriting
                 gui.notify(`${tot} maps from workspace loaded`);
             });
-
-
             //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of mapPage
             if (gui.workspace.spaces.MapExtension) {
                 this.mapBuilder.clear();
@@ -357,7 +365,7 @@ class MapExtension extends GuiExtension {
 
     deactivate() { /// the extension has to take care of removing all the buttons and element appended
         //this.sidebar.remove();
-        //this.sidebarRegions.remove();
+        //this.sidebarOverlay.remove();
         this.removeToggleButton(this.constructor.name); //this is compulsory to leave the interface clean
         super.deactivate(); //we will also call the super class deactivate method
     }
@@ -485,6 +493,7 @@ class MapExtension extends GuiExtension {
                 },
                 deactive: () => {
                     this.mapsList.hideAllDetails();
+                    this.mapBuilder.clear();
                 }
             }
         });
@@ -497,24 +506,35 @@ class MapExtension extends GuiExtension {
         this.mapPane.show();
     }
 
+    _removeRegion(id) {
+        this.regions[`${id}`].where.removeLayer(this.regions[`${id}`].layer);
+        this.sidebarOverlay.regions.removeItem(`${id}`);
+        delete this.regions[`${id}`];
+        delete this.activeConfiguration.layers.drawnItems.layers[`${id}`]
+    }
+
     _addRegion(e) {
         let layer = e.layer;
         let layerConfig = e.configuration;
         let where = e.where;
-        this.regions[layerConfig._id] = layerConfig;
+        this.regions[layerConfig._id] = {
+            layer: layer,
+            configuration: layerConfig,
+            where: where
+        }
         layer.on('click', () => {
-            if (!this.sidebarRegions.list.items[layerConfig._id].element.className.includes('active')) {
-                this.sidebarRegions.list.activeItem(layerConfig._id);
-                this.mapBuilder._l.setView(layer.getLatLngs()[0][0]);
-                this.selectedRegions.push(e);
+            if (!this.sidebarOverlay.regions.items[layerConfig._id].element.className.includes('active')) {
+                this.sidebarOverlay.regions.activeItem(layerConfig._id);
+                this.map.setView(layer.getLatLngs()[0][0]);
+                this.selectedRegions.push(layerConfig);
                 layer.setStyle({
                     fillOpacity: 0.8
                 });
             } else {
-                this.sidebarRegions.list.deactiveItem(layerConfig._id);
+                this.sidebarOverlay.regions.deactiveItem(layerConfig._id);
                 this.selectedRegions.splice(this.selectedRegions.indexOf(e), 1);
                 layer.setStyle({
-                    fillOpacity: 0.3
+                    fillOpacity: layerConfig.options.fillOpacity || 0.3
                 });
             }
         });
@@ -525,8 +545,8 @@ class MapExtension extends GuiExtension {
         inp.className = 'list-input';
         inp.readOnly = true;
         inp.onchange = () => {
-            this.sidebarRegions.list.setKey(layerConfig._id, inp.value);
-            this.mapBuilder.renameLayer(layerConfig.name, inp.value, where.name);
+            this.sidebarOverlay.regions.setKey(layerConfig._id, inp.value);
+            layerConfig.name = inp.value;
             layer.setTooltipContent(inp.value);
             inp.readOnly = true;
         }
@@ -534,45 +554,25 @@ class MapExtension extends GuiExtension {
             inp.readOnly = true;
         }
 
-        let context = new Menu();
-        if (!layer.group) {
-            context.append(new MenuItem({
-                label: 'Rename',
-                click: () => {
-                    inp.readOnly = false;
+        let rename = new MenuItem({
+            label: 'Rename',
+            click: () => {
+                inp.readOnly = false;
+            }
+        });
+
+        let del = new MenuItem({
+            label: 'Delete',
+            click: () => {
+                if (this.selectedRegions.length === 0) {
+                    this.selectedRegions.push(layerConfig);
                 }
-            }));
-            let color = new Menu();
-            this._colors.map((col) => {
-                color.append(new MenuItem({
-                    label: col,
-                    type: 'radio',
-                    checked: col === layerConfig.options.color && col === layerConfig.options.color,
-                    click: () => {
-                        this.mapBuilder.setLayerStyle(layerConfig.name, {
-                            color: col,
-                            fillColor: col
-                        }, where.name);
-                    }
-                }));
-            });
-            context.append(new MenuItem({
-                label: 'Color',
-                type: 'submenu',
-                submenu: color
-            }));
-            context.append(new MenuItem({
-                label: 'Delete',
-                click: () => {
-                    if (this.selectedRegions.length === 0) {
-                        this.selectedRegions.push(e);
-                    }
-                    this._deleteRegionsCheck(this.selectedRegions);
-                    this.selectedRegions = [];
-                }
-            }));
-        }
-        context.append(new MenuItem({
+                this._deleteRegionsCheck(this.selectedRegions);
+                this.selectedRegions = [];
+            }
+        });
+
+        let comp = new MenuItem({
             label: 'Compute',
             click: () => {
                 if (this.selectedRegions.length === 0) {
@@ -584,8 +584,8 @@ class MapExtension extends GuiExtension {
                 }
 
             }
-        }));
-        context.append(new MenuItem({
+        });
+        let exp = new MenuItem({
             label: 'Export statistics',
             click: () => {
                 if (this.selectedRegions.length === 0) {
@@ -594,39 +594,81 @@ class MapExtension extends GuiExtension {
                     this.exportsRegions(this.selectedRegions);
                 }
             }
-        }));
+        });
+        let context = () => {
+            let color = new Menu();
+            this._colors.map((col) => {
+                color.append(new MenuItem({
+                    label: col,
+                    type: 'radio',
+                    checked: col === layerConfig.options.color && col === layerConfig.options.color,
+                    click: () => {
+                        layer.setStyle({
+                            color: col,
+                            fillColor: col
+                        });
+                        layerConfig.options.color = col;
+                        layerConfig.options.fillColor = col;
+                    }
+                }));
+            });
+            color.append(new MenuItem({
+                label: 'Define new',
+                click: () => {
+                    this._defineNewColor();
+                }
+            }));
+            let contx = new Menu();
+            contx.append(rename);
+            contx.append(del);
+            contx.append(exp);
+            contx.append(comp);
+            contx.append(new MenuItem({
+                label: 'Color',
+                type: 'submenu',
+                submenu: color
+            }));
+            contx.popup();
+        }
         inp.placeholder = 'Region name';
         inp.value = layerConfig.name;
         inp.size = layerConfig.name.length + 1;
         layer.on('contextmenu', () => {
-            context.popup();
+            context();
         })
-        this.sidebarRegions.addItem({
+        this.sidebarOverlay.regions.addItem({
             id: layerConfig._id,
             title: inp,
             key: layerConfig.name,
             toggle: true,
             oncontextmenu: () => {
-                context.popup();
+                context();
             },
             onclick: {
                 active: () => {
-                    this.mapBuilder._l.setView(layer.getLatLngs()[0][0]);
-                    this.selectedRegions.push(e);
+                    this.map.setView(layer.getLatLngs()[0][0]);
+                    this.selectedRegions.push(layerConfig);
                     layer.setStyle({
                         fillOpacity: 0.8
                     });
                     gui.notify(`${layerConfig.name} selected, (${this.selectedRegions.length} tot)`);
                 },
                 deactive: () => {
-                    this.selectedRegions.splice(this.selectedRegions.indexOf(layer), 1);
+                    this.selectedRegions.splice(this.selectedRegions.indexOf(layerConfig), 1);
                     gui.notify(`${layerConfig.name} deselected, (${this.selectedRegions.length} tot)`);
                     layer.setStyle({
-                        fillOpacity: 0.3
+                        fillOpacity: layerConfig.options.fillOpacity || 0.3
                     });
                 }
             }
         });
+    }
+
+    _removeMarker(id) {
+        this.markers[`${id}`].where.removeLayer(this.markers[`${id}`].layer);
+        this.sidebarOverlay.markers.removeItem(`${id}`);
+        delete this.markers[`${id}`];
+        delete this.activeConfiguration.layers.drawnItems.layers[`${id}`]
     }
 
     _addMarker(e) {
@@ -635,7 +677,12 @@ class MapExtension extends GuiExtension {
         let where = e.where;
 
         let context = new Menu();
-        this.markers[layerConfig._id] = layerConfig;
+        this.markers[layerConfig._id] = {
+            configuration: layerConfig,
+            layer: layer,
+            where: where
+        };
+        this.activeConfiguration.layers.drawnItems.layers[layerConfig._id] = layerConfig;
 
         let title = input.input({
             type: `text`,
@@ -644,15 +691,13 @@ class MapExtension extends GuiExtension {
             className: `list-input`,
             readOnly: true,
             onchange: (inp) => {
-                this.sidebarRegions.markers.setKey(layerConfig._id, inp.value);
-                //this.sidebarRegions.markers.setTitle(layerConfig.id, title.value);
-                this.mapBuilder.renameLayer(layerConfig.name, inp.value, where.name);
-
+                this.sidebarOverlay.markers.setKey(layerConfig._id, inp.value);
+                layer.setTooltipContent(title.value);
+                layerConfig.name = inp.value;
                 inp.readOnly = true;
             },
-            onblur: () => {
-                title.value = layerConfig.name;
-                title.readOnly = true;
+            onblur: (inp) => {
+                inp.readOnly = true;
             }
         });
         title.size = layerConfig.name.length + 1;
@@ -679,7 +724,7 @@ class MapExtension extends GuiExtension {
         }));
 
 
-        this.sidebarRegions.markers.addItem({
+        this.sidebarOverlay.markers.addItem({
             id: layerConfig._id,
             title: title,
             key: layerConfig.name,
@@ -689,8 +734,8 @@ class MapExtension extends GuiExtension {
             },
             onclick: {
                 active: () => {
-                    this.sidebarRegions.markers.deactiveAll();
-                    this.mapBuilder.map.setView(layer.getLatLng());
+                    this.sidebarOverlay.markers.deactiveAll();
+                    this.map.setView(layer.getLatLng());
                     layer.openPopup();
                 },
                 deactive: () => {
@@ -700,9 +745,9 @@ class MapExtension extends GuiExtension {
         });
 
         layer.on('click', () => {
-            this.sidebarRegions.markers.deactiveAll();
-            this.sidebarRegions.markers.activeItem(layerConfig._id);
-            this.mapBuilder.map.setView(layer.getLatLng());
+            this.sidebarOverlay.markers.deactiveAll();
+            this.sidebarOverlay.markers.activeItem(layerConfig._id);
+            this.map.setView(layer.getLatLng());
         });
 
         layer.on('dblclick', () => {
@@ -711,66 +756,104 @@ class MapExtension extends GuiExtension {
     }
 
     _addListeners() {
+        this.map.on(L.Draw.Event.CREATED, (e) => {
+            let type = e.layerType,
+                layer = e.layer;
+            let config = {
+                type: type,
+                options: layer.options
+            }
+            if (layer.getLatLngs) {
+                config.latlngs = layer.getLatLngs();
+            }
+            if (layer.getLatLng) {
+                config.latlng = layer.getLatLng();
+            }
+            if (layer.getRadius) {
+                config.radius = layer.getRadius();
+            }
+            this.mapBuilder.loadLayer(config, this.mapBuilder._drawnItems);
+            this.activeConfiguration.layers.drawnItems.layers[config._id] = config;
+
+        });
+
+        // when items are removed
+        this.map.on(L.Draw.Event.DELETED, (e) => {
+            var layers = e.layers;
+            layers.eachLayer((layer) => {
+                this.mapBuilder._drawnItems.removeLayer(layer);
+                if (layer instanceof L.Marker) {
+                    this._removeMarker();
+                } else if (layer instanceof L.Rectangle) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Polygon) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Circle) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Polyline) {}
+            });
+        });
+
+        this.map.on(L.Draw.Event.EDITED, (e) => {
+            let layers = e.layers;
+            layers.eachLayer((layer) => {
+                let type = null;
+                if (layer instanceof L.Marker) {
+                    type = 'marker';
+                } else if (layer instanceof L.Rectangle) {
+                    type = 'rectangle';
+                } else if (layer instanceof L.Polygon) {
+                    type = 'polygon';
+                } else if (layer instanceof L.Circle) {
+                    type = 'circle';
+                } else if (layer instanceof L.Polyline) {
+                    type = 'polyline';
+                }
+                let config = {
+                    type: type,
+                    options: layer.options
+                }
+                if (layer.getLatLngs) {
+                    config.latlngs = layer.getLatLngs();
+                }
+                if (layer.getLatLng) {
+                    config.latlng = layer.getLatLng();
+                }
+                if (layer.getRadius) {
+                    config.radius = layer.getRadius();
+                }
+
+            });
+        });
+
+
         this.mapBuilder.on('error', (e) => {
             gui.notify(e.error);
         });
 
         //when clean mapmanager clean interface
         this.mapBuilder.on('clear', () => {
-            this.sidebarRegions.list.clean();
-            this.sidebarRegions.markers.clean();
+            this.sidebarOverlay.regions.clean();
+            this.sidebarOverlay.markers.clean();
             this.selectedRegions = [];
             this.regions = {};
             this.markers = {};
         });
 
-
-        this.mapBuilder.on('rename:layer', (e) => {
-            let type = e.configuration.type;
-            let configuration = e.configuration;
-            if (type === 'polygon' || type === 'rectangle') {
-                this.sidebarRegions.list.setTitle(configuration._id, configuration.name);
-                this.regions[configuration._id].name = configuration.name;
-            }
-            if (type === 'marker') {
-                this.sidebarRegions.markers.setTitle(configuration._id, configuration.name);
-                this.markers[configuration._id].name = configuration.name;
-            }
+        this.mapBuilder.on('set:configuration', (e) => {
+            this.activeConfiguration = e.configuration;
         });
 
-        this.mapBuilder.on('update:layer', (e) => {
-            let type = e.configuration.type;
-            let configuration = e.configuration;
-
-            if (type === 'polygon' || type === 'rectangle') {
-                this.sidebarRegions.list.setTitle(configuration._id, configuration.name);
-                layer.setTooltipContent(configuration.name);
-                this.regions[configuration._id] = configuration;
-            }
-            if (type === 'marker') {
-                this.sidebarRegions.markers.setTitle(configuration._id, configuration.name);
-                layer.setTooltipContent(configuration.name);
-                this.markers[configuration._id] = configuration;
-            }
+        this.mapBuilder.on('add:drawnitems', (e) => {
+            this.activeConfiguration.layers.drawnItems = e.configuration;
         });
+
 
         this.mapBuilder.on('set:configuration', (e) => {
             this.activeMap = e.configuration
         });
 
-        this.mapBuilder.on('remove:layer', (e) => {
-            let configuration = e.configuration;
-            let type = e.configuration.type;
-            if (type === 'polygon' || type === 'rectangle') {
-                this.sidebarRegions.list.removeItem(configuration._id);
-                delete this.regions[configuration._id];
-            }
-            if (type === 'marker') {
-                this.sidebarRegions.markers.removeItem(configuration._id);
-            }
-        });
-
-        //when a polygon is added create region element in the sidebarRegions and relative actions,
+        //when a polygon is added create region element in the sidebarOverlay and relative actions,
         this.mapBuilder.on('load:polygon', (e) => {
             this._addRegion(e);
         });
@@ -785,6 +868,70 @@ class MapExtension extends GuiExtension {
 
     }
 
+    _defineNewColor() {
+        let modal = new Modal({
+            title: "Define color",
+            height: "auto"
+        });
+        let body = util.div();
+        let color = '#000000';
+        let colorPickerContainer = util.div('color-picker-wrapper');
+        colorPickerContainer.style.backgroundColor = color;
+        body.appendChild(colorPickerContainer);
+        input.input({
+            parent: colorPickerContainer,
+            id: 'cP0',
+            className: '',
+            value: color,
+            label: '',
+            type: 'color',
+            oninput: (inp) => {
+                color = inp.value;
+                document.getElementById('cP1').value = inp.value;
+                colorPickerContainer.style.backgroundColor = inp.value;
+            }
+        });
+        input.input({
+            parent: body,
+            id: 'cP1',
+            className: '',
+            label: '',
+            value: color,
+            type: 'text',
+            placeholder: 'color',
+            oninput: (inp) => {
+                color = inp.value;
+                document.getElementById('cP0').value = inp.value;
+                colorPickerContainer.style.backgroundColor = inp.value;
+            }
+        });
+        let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
+        buttonsContainer.addButton({
+            id: "CancelColor0",
+            text: "Cancel",
+            action: () => {
+                modal.destroy();
+            },
+            className: "btn-default"
+        });
+        buttonsContainer.addButton({
+            id: "SaveColor0",
+            text: "Add",
+            action: () => {
+                this._colors.push(color);
+                modal.destroy();
+            },
+            className: "btn-default"
+        });
+        let footer = util.div();
+        footer.appendChild(buttonsContainer.element);
+        modal.addBody(body);
+        modal.addFooter(footer);
+        modal.show();
+
+
+    }
+
     _editMarkerDetails(e) {
         let marker = e.layer;
         let configuration = e.configuration;
@@ -793,9 +940,7 @@ class MapExtension extends GuiExtension {
             title: "Edit marker details",
             height: "auto"
         });
-
         let grid = new Grid(2, 2);
-
         let txtMarkerName = input.input({
             type: "text",
             id: `txtMarkerName_${configuration._id}_modal`,
@@ -803,7 +948,6 @@ class MapExtension extends GuiExtension {
             label: 'Marker name'
         });
         grid.addElement(txtMarkerName, 0, 1);
-
         let taMarkerDetails = document.createElement("TEXTAREA");
         taMarkerDetails.id = "tamarkerdetails";
         taMarkerDetails.value = configuration.details;
@@ -814,7 +958,6 @@ class MapExtension extends GuiExtension {
         lblMarkerDetails.innerHTML = "Marker details: ";
         grid.addElement(lblMarkerDetails, 1, 0);
         grid.addElement(taMarkerDetails, 1, 1);
-
         let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
         buttonsContainer.addButton({
             id: "CancelMarker00",
@@ -828,8 +971,8 @@ class MapExtension extends GuiExtension {
             id: "SaveMarker00",
             text: "Save",
             action: () => {
-                this.sidebarRegions.markers.setKey(configuration._id, txtMarkerName.value);
-                this.mapBuilder.renameLayer(configuration.name, txtMarkerName.value, e.where.name);
+                this.sidebarOverlay.markers.setTitle(configuration._id, txtMarkerName.value);
+                configuration.name = txtMarkerName.value;
                 configuration.details = taMarkerDetails.value;
                 marker.setTooltipContent(txtMarkerName.value);
                 marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
@@ -855,7 +998,7 @@ class MapExtension extends GuiExtension {
             noLink: true
         }, (id) => {
             if (id > 0) {
-                this.mapBuilder.removeLayer(e.configuration.name, e.where.name);
+                this._removeMarker(e.layer._id);
             }
         });
     }
@@ -866,12 +1009,12 @@ class MapExtension extends GuiExtension {
             type: 'warning',
             buttons: ['No', "Yes"],
             message: `Delete the selected regions? (no undo available)`,
-            detail: `Regions to be deleted: ${regions.map((reg) => { return reg.configuration.name })}`,
+            detail: `Regions to be deleted: ${regions.map((reg) => { return reg.name })}`,
             noLink: true
         }, (id) => {
             if (id > 0) {
                 regions.map((reg) => {
-                    this.mapBuilder.removeLayer(reg.configuration.name, reg.where.name);
+                    this._removeRegion(reg._id);
                 });
                 regions = [];
             }
@@ -921,13 +1064,10 @@ class MapExtension extends GuiExtension {
             title: 'Add a new layer',
             filters: [{
                 name: 'Configuration',
-                extensions: ['json', 'mapconfig']
+                extensions: ['json']
             }, {
                 name: 'Images',
                 extensions: ['jpg', 'png', 'gif', 'tiff', 'tif']
-            }, {
-                name: 'CSV',
-                extensions: ['csv']
             }],
             properties: ['openFile']
         }, (filenames) => {
@@ -965,11 +1105,11 @@ class MapExtension extends GuiExtension {
             this.addLayer({
                 name: path,
                 imageUrl: path,
-                //tilesUrlTemplate: path,
+                tilesUrlTemplate: path,
                 maxZoom: 8,
                 author: 'unknown',
                 type: 'imageLayer',
-                opacity: 0.8,
+                opacity: 1,
                 //tileSize: 256,
                 tileSize: [dim.width / siz * 256, dim.height / siz * 256],
                 bounds: [
@@ -1029,7 +1169,8 @@ class MapExtension extends GuiExtension {
 
     addLayer(conf) {
         conf = mapio.parseLayer(conf);
-        this.mapBuilder.addLayer(conf);
+        this.mapBuilder.loadLayer(conf);
+        this.activeConfiguration.layers[`layer_${conf._id}`] = conf;
     }
 
 

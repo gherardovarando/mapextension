@@ -144,7 +144,6 @@ class LayersControl {
                         this.mapManager.loadLayer(configuration);
                     }
                 }));
-                this._addToList(layer, customMenuItems, tools, configuration, list);
                 break;
             case 'imageLayer':
                 tools = this.createToolbox(layer, configuration, {
@@ -157,7 +156,7 @@ class LayersControl {
                         delete this.mapManager._configuration.layers[`${configuration._key}`];
                     }
                 }));
-                this._addToList(layer, customMenuItems, tools, configuration, this.tileslist);
+                list = this.tileslist;
                 break;
             case 'featureGroup':
                 tools = this.createToolbox(layer, configuration, {
@@ -176,13 +175,23 @@ class LayersControl {
                         delete this.mapManager._configuration.layers[`${configuration._key}`];
                     }
                 }));
-                this._addToList(layer, customMenuItems, tools, configuration, this.overlaylist);
+                list = this.overlaylist;
                 break;
             case 'layerGroup':
 
                 break;
             default:
 
+        }
+        this._addToList(layer, customMenuItems, tools, configuration, list);
+        if (typeof layer.on === 'function') {
+            layer.on('remove', (e) => {
+                list.deactiveItem(`${e.target._id}`);
+            });
+
+            layer.on('add', (e) => {
+                list.activeItem(`${e.target._id}`);
+            });
         }
     }
 
@@ -201,10 +210,6 @@ class LayersControl {
             this.baseLayer = null;
         });
     }
-
-
-
-
 
 
     /**
@@ -270,31 +275,24 @@ class LayersControl {
             },
             onclick: {
                 active: (item, e) => {
-                    if (configuration.baseLayer) {
-                        this.mapManager.map.removeLayer(this.baseLayer);
-                        this.baseLayer = layer;
-                    }
+                     if (configuration.baseLayer) {
+                         this.mapManager.map.removeLayer(this.baseLayer);
+                         this.baseLayer = layer;
+                     }
                     this.mapManager.map.addLayer(layer);
                 },
                 deactive: (item, e) => {
-                    if (!configuration.baseLayer) {
-                        this.mapManager.map.removeLayer(layer);
-                    } else {
-                        list.activeItem(`${configuration._id}`);
-                    }
+                     if (!configuration.baseLayer) {
+                         this.mapManager.map.removeLayer(layer);
+                     } else {
+                         list.activeItem(item);
+                     }
                 }
             },
-            key: configuration.name,
-            toggle: list != this.datalist
+            toggle: true,
+            key: configuration.name
         });
 
-
-        if (typeof layer.on === 'function') {
-            layer.on('remove', () => {
-              console.log("remove");
-                list.deactiveItem(`${layer._id}`);
-            });
-        }
     }
 
     /**
@@ -338,6 +336,7 @@ class LayersControl {
                             fillColor: inp.value,
                             color: inp.value
                         });
+                        this.mapManager.setDrawingColor(inp.value);
                     }
                 },
                 onchange: (inp) => {

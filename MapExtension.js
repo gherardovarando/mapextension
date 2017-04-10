@@ -112,7 +112,7 @@ class MapExtension extends GuiExtension {
                 submenu: [{
                     label: 'File'
                 }, {
-                    label: 'Tile'
+                    label: 'Tiles Url'
                 }, {
                     label: 'Image'
                 }, {
@@ -122,11 +122,19 @@ class MapExtension extends GuiExtension {
                 label: 'Regions',
                 type: 'submenu',
                 submenu: [{
-                    label: 'Delete',
+                    label: 'Delete selected',
                     click: () => {
                         this._deleteRegionsCheck(this.selectedRegions);
                         this.selectedRegions = [];
                     }
+                }, {
+                    label: 'Delete all',
+                    click: () => {
+                      Object.keys(this.regions).map((k)=>{
+                        this._removeRegion(k);
+                      });
+                      this.selectedRegions = [];
+                                            }
                 }, {
                     label: 'Export',
                     click: () => {
@@ -440,7 +448,7 @@ class MapExtension extends GuiExtension {
                 this.mapsList.showDetails(configuration._id);
             }
         }));
-        let tools = util.div();
+        let tools = util.div('table-container toolbox');
         let first = util.div();
         let second = util.div();
         tools.onclick = (e) => e.stopPropagation();
@@ -449,23 +457,27 @@ class MapExtension extends GuiExtension {
         input.input({
             label: 'Max. zoom: ',
             parent: first,
-            type: "number",
-            className: 'form-control',
+            type: "range",
+            className: 'form-control vmiddle',
             id: `numMaxZoom_${configuration._id}`,
             value: 0,
             min: 0,
+            max: 20,
+            by: 1,
+            width: '5px',
             onchange: (inp) => {
                 this.mapBuilder.setMaxZoom(Number(inp.value));
             }
         });
         input.input({
-            type: "number",
+            type: "range",
             parent: second,
             label: 'Min. zoom: ',
-            className: 'form-conrol',
+            className: 'form-control vmiddle',
             id: `numMinZoom_${configuration._id}`,
             value: 0,
             max: 0,
+            min: -10,
             oninput: (inp) => {
                 this.mapBuilder.setMinZoom(Number(inp.value));
             }
@@ -526,7 +538,7 @@ class MapExtension extends GuiExtension {
             if (!this.sidebarOverlay.regions.items[layerConfig._id].element.className.includes('active')) {
                 this.sidebarOverlay.regions.activeItem(layerConfig._id);
                 this.map.setView(layer.getLatLngs()[0][0]);
-                this.selectedRegions.push(layerConfig);
+                this.selectedRegions.push(layerConfig._id);
                 layer.setStyle({
                     fillOpacity: 0.8
                 });
@@ -565,7 +577,7 @@ class MapExtension extends GuiExtension {
             label: 'Delete',
             click: () => {
                 if (this.selectedRegions.length === 0) {
-                    this.selectedRegions.push(layerConfig);
+                    this.selectedRegions.push(layerConfig._id);
                 }
                 this._deleteRegionsCheck(this.selectedRegions);
                 this.selectedRegions = [];
@@ -578,8 +590,8 @@ class MapExtension extends GuiExtension {
                 if (this.selectedRegions.length === 0) {
                     this.regionAnalyzer.computeRegionStats(layer);
                 } else {
-                    this.selectedRegions.map((reg) => {
-                        this.regionAnalyzer.computeRegionStats(reg);
+                    this.selectedRegions.map((id) => {
+                        this.regionAnalyzer.computeRegionStats(id);
                     });
                 }
 
@@ -647,14 +659,14 @@ class MapExtension extends GuiExtension {
             onclick: {
                 active: () => {
                     this.map.setView(layer.getLatLngs()[0][0]);
-                    this.selectedRegions.push(layerConfig);
+                    this.selectedRegions.push(layerConfig._id);
                     layer.setStyle({
                         fillOpacity: 0.8
                     });
                     gui.notify(`${layerConfig.name} selected, (${this.selectedRegions.length} tot)`);
                 },
                 deactive: () => {
-                    this.selectedRegions.splice(this.selectedRegions.indexOf(layerConfig), 1);
+                    this.selectedRegions.splice(this.selectedRegions.indexOf(layerConfig._id), 1);
                     gui.notify(`${layerConfig.name} deselected, (${this.selectedRegions.length} tot)`);
                     layer.setStyle({
                         fillOpacity: layerConfig.options.fillOpacity || 0.3
@@ -1009,12 +1021,12 @@ class MapExtension extends GuiExtension {
             type: 'warning',
             buttons: ['No', "Yes"],
             message: `Delete the selected regions? (no undo available)`,
-            detail: `Regions to be deleted: ${regions.map((reg) => { return reg.name })}`,
+            detail: `Regions to be deleted: ${regions.map((id) => { return this.regions[id].name })}`,
             noLink: true
         }, (id) => {
             if (id > 0) {
-                regions.map((reg) => {
-                    this._removeRegion(reg._id);
+                regions.map((id) => {
+                    this._removeRegion(id);
                 });
                 regions = [];
             }
@@ -1058,11 +1070,11 @@ class MapExtension extends GuiExtension {
     }
 
 
-    openLayerFile() {
+    openLayerFile(filters) {
         if (Object.keys(this.maps).length <= 0) return;
         dialog.showOpenDialog({
             title: 'Add a new layer',
-            filters: [{
+            filters: filters || [{
                 name: 'Configuration',
                 extensions: ['json']
             }, {

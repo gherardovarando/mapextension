@@ -145,7 +145,7 @@ class LayersControl {
                     }
                 }));
                 break;
-            case 'imageLayer':
+            case 'imageOverlay':
                 tools = this.createToolbox(layer, configuration, {
                     opacity: true
                 });
@@ -178,9 +178,22 @@ class LayersControl {
                 list = this.overlaylist;
                 break;
             case 'layerGroup':
-
+            tools = this.createToolbox(layer, configuration, {
+                opacity: true,
+                color: true,
+                weight: true
+            });
+            customMenuItems.push(new MenuItem({
+                label: 'Delete',
+                click: () => {
+                    this.overlaylist.removeItem(`${configuration._id}`);
+                    delete this.mapManager._configuration.layers[`${configuration._key}`];
+                }
+            }));
+            list = this.overlaylist;
                 break;
             default:
+            list = this.overlaylist;
 
         }
         this._addToList(layer, customMenuItems, tools, configuration, list);

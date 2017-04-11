@@ -130,11 +130,11 @@ class MapExtension extends GuiExtension {
                 }, {
                     label: 'Delete all',
                     click: () => {
-                      Object.keys(this.regions).map((k)=>{
-                        this._removeRegion(k);
-                      });
-                      this.selectedRegions = [];
-                                            }
+                        Object.keys(this.regions).map((k) => {
+                            this._removeRegion(k);
+                        });
+                        this.selectedRegions = [];
+                    }
                 }, {
                     label: 'Export',
                     click: () => {
@@ -153,7 +153,7 @@ class MapExtension extends GuiExtension {
         this.maps = {};
         this.regions = {};
         this.markers = {};
-        this.activeMap = null;
+        this.activeConfiguration = null;
         this._indx = 0;
         this._indx2 = 0;
     }
@@ -223,8 +223,43 @@ class MapExtension extends GuiExtension {
                     zoom: {
                         position: 'topright'
                     },
-                    layers: (layer, configuration, map) => {
-                        this.layersControl.addLayer(layer, configuration, map);
+                    layers: (layer, configuration, where) => {
+                        switch (configuration.type) {
+                            case 'polygon':
+                                this._addRegion({
+                                    layer: layer,
+                                    configuration: configuration,
+                                    where: where
+                                });
+                                where.addLayer(layer);
+                                break;
+                            case 'rectangle':
+                                this._addRegion({
+                                    layer: layer,
+                                    configuration: configuration,
+                                    where: where
+                                });
+                                where.addLayer(layer);
+                                break;
+                            case 'circle':
+                                this._addRegion({
+                                    layer: layer,
+                                    configuration: configuration,
+                                    where: where
+                                });
+                                where.addLayer(layer);
+                                break;
+                            case 'marker':
+                                this._addMarker({
+                                  layer: layer,
+                                  configuration: configuration,
+                                  where: where
+                                });
+                                where.addLayer(layer);
+                                break;
+                            default:
+                                this.layersControl.addLayer(layer, configuration, map);
+                        }
                     }
                 },
                 tooltip: {
@@ -694,7 +729,6 @@ class MapExtension extends GuiExtension {
             layer: layer,
             where: where
         };
-        this.activeConfiguration.layers.drawnItems.layers[layerConfig._id] = layerConfig;
 
         let title = input.input({
             type: `text`,
@@ -860,24 +894,6 @@ class MapExtension extends GuiExtension {
             this.activeConfiguration.layers.drawnItems = e.configuration;
         });
 
-
-        this.mapBuilder.on('set:configuration', (e) => {
-            this.activeMap = e.configuration
-        });
-
-        //when a polygon is added create region element in the sidebarOverlay and relative actions,
-        this.mapBuilder.on('load:polygon', (e) => {
-            this._addRegion(e);
-        });
-
-        this.mapBuilder.on('load:rectangle', (e) => {
-            this._addRegion(e);
-        });
-
-        this.mapBuilder.on('load:marker', (e) => {
-            this._addMarker(e);
-        });
-
     }
 
     _defineNewColor() {
@@ -1021,7 +1037,7 @@ class MapExtension extends GuiExtension {
             type: 'warning',
             buttons: ['No', "Yes"],
             message: `Delete the selected regions? (no undo available)`,
-            detail: `Regions to be deleted: ${regions.map((id) => { return this.regions[id].name })}`,
+            detail: `Regions to be deleted: ${regions.map((id) => { return this.regions[id].configuration.name })}`,
             noLink: true
         }, (id) => {
             if (id > 0) {

@@ -172,7 +172,7 @@ class MapExtension extends GuiExtension {
         });
         let flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
 
-        this.layersControl = new LayersControl();
+        this.layersControl = new LayersControl(null, this.activeConfiguration);
         let options = {
             map: {
                 minZoom: 0,
@@ -336,7 +336,7 @@ class MapExtension extends GuiExtension {
         let map = L.map(options.id || 'map', options.map);
         this.map = map;
         this.mapBuilder = new L.MapBuilder(map, options.builder);
-        this.layersControl.setMapManager(this.mapBuilder);
+        this.layersControl.setBuilder(this.mapBuilder);
         this.sidebarOverlay = new Sidebar(this.element, {
             className: 'pane-sm scrollable'
         });
@@ -796,6 +796,10 @@ class MapExtension extends GuiExtension {
             this.map.setView(layer.getLatLng());
         });
 
+        layer.on('contextmenu', () => {
+          context.popup();
+        })
+
         layer.on('dblclick', () => {
             this._editMarkerDetails(e);
         });
@@ -1059,20 +1063,10 @@ class MapExtension extends GuiExtension {
                 extensions: ['csv']
             }]
         }, (filename) => {
-            let pointName = this.mapBuilder.getLayers('pointsLayer').map((x) => {
-                return (x.name)
-            })
             let fields = ['name'];
             let cont = json2csv({
                 data: regions.map((reg) => {
-                    reg._configuration.stats.name = reg._configuration.name;
-                    Object.keys(reg._configuration.stats).map((key) => {
-                        console.log(key);
-                        if (fields.indexOf(`${key}`) < 0) {
-                            fields.push(`${key}`);
-                        }
-                    });
-                    return (reg._configuration.stats);
+
                 }),
                 fields: fields
             });

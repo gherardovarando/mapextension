@@ -43,8 +43,9 @@ class LayersControl {
     /**
      * Class constructor.
      */
-    constructor(mapManager) {
+    constructor(builder, configuration) {
 
+        this.configuration = configuration;
         this.element = util.div('layers-widget');
         this.content = util.div('content');
         this.tabs = new TabGroup(this.content);
@@ -87,8 +88,8 @@ class LayersControl {
         });
         this.element.appendChild(this.content);
         this.baseLayer = null;
-        if (mapManager) {
-            this.setMapManager(mapManager);
+        if (builder) {
+            this.setBuilder(builder);
         }
 
     }
@@ -115,7 +116,7 @@ class LayersControl {
                 if (configuration.baseLayer) {
                     if (!this.baseLayer) {
                         this.baseLayer = layer;
-                        this.mapManager.map.addLayer(this.baseLayer);
+                        this.builder.map.addLayer(this.baseLayer);
                     }
                 }
                 customMenuItems.push(new MenuItem({
@@ -124,9 +125,9 @@ class LayersControl {
                         if (this.baseLayer === layer) {
                             return;
                         }
-                        this.mapManager.map.removeLayer(layer);
+                        this.builder.map.removeLayer(layer);
                         list.removeItem(`${configuration._id}`);
-                        delete this.mapManager._configuration.layers[`${configuration._key}`];
+                        delete this.configuration.layers[`${configuration._key}`];
                     }
                 }));
                 customMenuItems.push(new MenuItem({
@@ -138,10 +139,10 @@ class LayersControl {
                     checked: configuration.baseLayer,
                     click: (menuItem) => {
                         if (this.baseLayer === layer) return;
-                        this.mapManager.map.removeLayer(layer);
+                        this.builder.map.removeLayer(layer);
                         list.removeItem(`${configuration._id}`);
                         configuration.baseLayer = menuItem.checked;
-                        this.mapManager.loadLayer(configuration);
+                        this.builder.loadLayer(configuration);
                     }
                 }));
                 break;
@@ -153,7 +154,7 @@ class LayersControl {
                     label: 'Delete',
                     click: () => {
                         this.tileslist.removeItem(`${configuration._id}`);
-                        delete this.mapManager._configuration.layers[`${configuration._key}`];
+                        delete this.configuration.layers[`${configuration._key}`];
                     }
                 }));
                 list = this.tileslist;
@@ -172,28 +173,28 @@ class LayersControl {
                             return;
                         }
                         this.overlaylist.removeItem(`${configuration._id}`);
-                        delete this.mapManager._configuration.layers[`${configuration._key}`];
+                        delete this.configuration.layers[`${configuration._key}`];
                     }
                 }));
                 list = this.overlaylist;
                 break;
             case 'layerGroup':
-            tools = this.createToolbox(layer, configuration, {
-                opacity: true,
-                color: true,
-                weight: true
-            });
-            customMenuItems.push(new MenuItem({
-                label: 'Delete',
-                click: () => {
-                    this.overlaylist.removeItem(`${configuration._id}`);
-                    delete this.mapManager._configuration.layers[`${configuration._key}`];
-                }
-            }));
-            list = this.overlaylist;
+                tools = this.createToolbox(layer, configuration, {
+                    opacity: true,
+                    color: true,
+                    weight: true
+                });
+                customMenuItems.push(new MenuItem({
+                    label: 'Delete',
+                    click: () => {
+                        this.overlaylist.removeItem(`${configuration._id}`);
+                        delete this.configuration.layers[`${configuration._key}`];
+                    }
+                }));
+                list = this.overlaylist;
                 break;
             default:
-            list = this.overlaylist;
+                list = this.overlaylist;
 
         }
         this._addToList(layer, customMenuItems, tools, configuration, list);
@@ -210,12 +211,12 @@ class LayersControl {
 
     /**
      * Sets the map manager and listens to its events.
-     * @param {MapManager} mapManager The map manager.
+     * @param {builder} builder The map manager.
      */
-    setMapManager(mapManager) {
-        this.mapManager = mapManager;
+    setBuilder(builder) {
+        this.builder = builder;
 
-        this.mapManager.on('clear', () => {
+        this.builder.on('clear', () => {
             this.baselist.clean();
             this.tileslist.clean();
             this.overlaylist.clean();
@@ -282,24 +283,24 @@ class LayersControl {
             id: configuration._id,
             title: titleTable,
             details: tools,
-            active: (this.baseLayer === layer) || (list === this.datalist) || (this.mapManager && this.mapManager.map.hasLayer(layer)),
+            active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && this.builder.map.hasLayer(layer)),
             oncontextmenu: () => {
                 context.popup()
             },
             onclick: {
                 active: (item, e) => {
-                     if (configuration.baseLayer) {
-                         this.mapManager.map.removeLayer(this.baseLayer);
-                         this.baseLayer = layer;
-                     }
-                    this.mapManager.map.addLayer(layer);
+                    if (configuration.baseLayer) {
+                        this.builder.map.removeLayer(this.baseLayer);
+                        this.baseLayer = layer;
+                    }
+                    this.builder.map.addLayer(layer);
                 },
                 deactive: (item, e) => {
-                     if (!configuration.baseLayer) {
-                         this.mapManager.map.removeLayer(layer);
-                     } else {
-                         list.activeItem(item);
-                     }
+                    if (!configuration.baseLayer) {
+                        this.builder.map.removeLayer(layer);
+                    } else {
+                        list.activeItem(item);
+                    }
                 }
             },
             toggle: true,
@@ -349,7 +350,7 @@ class LayersControl {
                             fillColor: inp.value,
                             color: inp.value
                         });
-                        this.mapManager.setDrawingColor(inp.value);
+                        this.builder.setDrawingColor(inp.value);
                     }
                 },
                 onchange: (inp) => {

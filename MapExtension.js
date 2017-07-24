@@ -46,6 +46,7 @@ const LayersControl = require('./src/LayersControl.js');
 
 const leaflet = require('leaflet');
 const leafletMarkerCluster = require('leaflet.markercluster');
+const leafletcsvtiles = require('leaflet-csvtiles');
 const geometryutil = require('leaflet-geometryutil');
 const leafletDraw = require('leaflet-draw');
 const snap = require(`leaflet-snap`);
@@ -61,7 +62,12 @@ const {
     app
 } = require('electron').remote;
 const icon = 'fa fa-map';
-
+const CRSs = {
+    simple: L.CRS.Simple,
+    EPSG3395: L.CRS.EPSG3395,
+    EPSG3857: L.CRS.EPSG3857,
+    EPSG4326: L.CRS.EPSG4326
+};
 
 
 
@@ -73,7 +79,12 @@ class MapExtension extends GuiExtension {
             menuLabel: 'Maps',
             menuTemplate: [{
                 label: 'Show',
-                click: () => this.show()
+                click: () => this.toggle(),
+                accelerator: 'Alt + M '
+            }, {
+                label: 'Show configuration',
+                click: () => this.mapPane.toggleBottom(),
+                accelerator: 'CommandOrControl + P'
             }, {
                 label: 'Reload map',
                 click: () => {
@@ -103,59 +114,61 @@ class MapExtension extends GuiExtension {
                     }, (err) => {
                         gui.notify(err);
                     });
-                }
+                },
             }, {
                 type: 'separator'
             }, {
                 label: 'Add layer',
                 type: 'submenu',
                 submenu: [{
-                    label: 'File'
+                    label: 'File',
+                    click: () => {
+                        if (!this._isLoaded) {
+                            gui.notify('First load or create a map');
+                            return;
+                        }
+                        this.openLayerFile();
+                    }
                 }, {
-                    label: 'Tiles Url'
+                    label: 'Tiles Url',
+                    click: () => {
+                        if (!this._isLoaded) {
+                            gui.notify('First load or create a map');
+                            return;
+                        }
+                        this._modaltilelayer();
+                    }
                 }, {
-                    label: 'Image'
-                }, {
-                    label: 'Guide'
+                    label: 'Guide',
+                    click: () => {
+                        if (!this._isLoaded) {
+                            gui.notify('First load or create a map');
+                            return;
+                        }
+                        this._modalGuideLayer();
+                    }
                 }]
             }, {
-                label: 'Regions',
-                type: 'submenu',
-                submenu: [{
-                    label: 'Delete selected',
-                    click: () => {
-                        this._deleteRegionsCheck(this.selectedRegions);
-                        this.selectedRegions = [];
-                    }
-                }, {
-                    label: 'Delete all',
-                    click: () => {
-                        Object.keys(this.regions).map((k) => {
-                            this._removeRegion(k);
-                        });
-                        this.selectedRegions = [];
-                    }
-                }, {
-                    label: 'Export',
-                    click: () => {
-
-                    }
-                }, {
-                    label: 'Compute',
-                    click: () => {
-
-                    }
-                }]
+                label: "Setting",
+                click: () => {
+                    this._setSettings();
+                }
             }]
         });
-        this._colors = ['blue', 'red', 'pink', 'orange', 'yellow', 'green', 'purple', 'black', 'white'];
-        this.selectedRegions = [];
+        this._settings = {
+            multiRegionSelect: true,
+            multiMarkerSelect: false,
+            crs: 'simple',
+            zoomControl: false
+        }
         this.maps = {};
-        this.regions = {};
-        this.markers = {};
         this.activeConfiguration = null;
         this._indx = 0;
-        this._indx2 = 0;
+    }
+
+    show() {
+        super.show();
+        gui.viewTrick();
     }
 
     activate() {
@@ -170,15 +183,23 @@ class MapExtension extends GuiExtension {
         this.sidebar = new Sidebar(this.element, {
             className: 'pane-sm scrollable'
         });
-        let flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
+        this.sidebar.flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
+        this.layersControl = new LayersControl(this.mapBuilder);
+        let zc;
+        if (this._settings.zoomControl) {
+            zc = {
+                position: 'topright'
+            };
+        } else {
+            zc = false;
+        }
 
-        this.layersControl = new LayersControl(null, this.activeConfiguration);
         let options = {
             map: {
                 minZoom: 0,
                 zoomSnap: 1,
                 zoomDelta: 1,
-                crs: L.CRS.Simple,
+                crs: CRSs[this._settings.crs],
                 zoomControl: false
             },
             builder: {
@@ -220,46 +241,9 @@ class MapExtension extends GuiExtension {
                             allowIntersection: false
                         }
                     },
-                    zoom: {
-                        position: 'topright'
-                    },
+                    zoom: zc,
                     layers: (layer, configuration, where) => {
-                        switch (configuration.type) {
-                            case 'polygon':
-                                this._addRegion({
-                                    layer: layer,
-                                    configuration: configuration,
-                                    where: where
-                                });
-                                where.addLayer(layer);
-                                break;
-                            case 'rectangle':
-                                this._addRegion({
-                                    layer: layer,
-                                    configuration: configuration,
-                                    where: where
-                                });
-                                where.addLayer(layer);
-                                break;
-                            case 'circle':
-                                this._addRegion({
-                                    layer: layer,
-                                    configuration: configuration,
-                                    where: where
-                                });
-                                where.addLayer(layer);
-                                break;
-                            case 'marker':
-                                this._addMarker({
-                                  layer: layer,
-                                  configuration: configuration,
-                                  where: where
-                                });
-                                where.addLayer(layer);
-                                break;
-                            default:
-                                this.layersControl.addLayer(layer, configuration, map);
-                        }
+                        this.layersControl.addLayer(layer, configuration, where);
                     }
                 },
                 tooltip: {
@@ -272,16 +256,15 @@ class MapExtension extends GuiExtension {
                 }
             }
         }
-        flexLayout.appendToLastContainer(this.layersControl.element);
         this.sidebar.show();
+        this.sidebar.flexLayout.appendToLastContainer(this.layersControl.layersWidget.element);
 
-        let mapsListContainer = util.div();
-        this.mapsList = new ListGroup(mapsListContainer);
+        this.mapsList = new ListGroup('mapslist');
         this.mapsList.addSearch({
             placeholder: 'Search maps'
         });
 
-        flexLayout.appendToFirstContainer(this.mapsList.element);
+        this.sidebar.flexLayout.appendToFirstContainer(this.mapsList.element);
 
         this.sidebar.element.ondragover = (ev) => {
             ev.dataTransfer.dropEffect = "none";
@@ -304,13 +287,14 @@ class MapExtension extends GuiExtension {
                 }
             }
         };
-        //this.sidebar.show();
+
         this.mapPane = new SplitPane(util.div());
+
         this.mapPane.top.ondragover = (ev) => {
             ev.dataTransfer.dropEffect = "none";
             for (let f of ev.dataTransfer.files) {
                 let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i;
-                if (regx.test(f.name)) {
+                if (regx.test(f.name) && (this._isLoaded)) {
                     ev.dataTransfer.dropEffect = "link";
                     ev.preventDefault();
                 }
@@ -320,7 +304,7 @@ class MapExtension extends GuiExtension {
             ev.preventDefault();
             for (let f of ev.dataTransfer.files) {
                 let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i;
-                if (regx.test(f.name)) {
+                if (regx.test(f.name) && (this._isLoaded)) {
                     this.addLayerFile(f.path);
                 }
             }
@@ -333,14 +317,56 @@ class MapExtension extends GuiExtension {
         mapCont.style['z-index'] = 0;
         mapCont.id = options.id || 'map';
         this.mapPane.top.appendChild(mapCont);
-        let map = L.map(options.id || 'map', options.map);
+        let map = L.map(options.id || 'map', options.map); //define map object
         this.map = map;
-        this.mapBuilder = new L.MapBuilder(map, options.builder);
-        this.layersControl.setBuilder(this.mapBuilder);
+
+        let configDisplay = util.div('');
+        configDisplay.style.width = '100%';
+        configDisplay.style.height = '100%';
+        let bar = util.div('top-bar');
+        bar.innerHTML = "DANGER!! You can now edit directly the configuration of the selected map, you should do it just if you really knows what you are doing otherwise you could break the map and be unable to use it. To save the configuration press Ctrl + Enter";
+        bar.oncontextmenu = () => {
+            (Menu.buildFromTemplate(
+                [{
+                    label: 'I am an expert...trust me',
+                    click: () => bar.style.display = 'none'
+                }]
+            )).popup();
+        }
+        this.configInput = document.createElement('TEXTAREA');
+        this.configInput.className = 'black-text';
+        this.configInput.addEventListener('keyup', (e) => {
+            if (e.key == 'Enter' && e.ctrlKey) {
+                let conf = JSON.parse(this.configInput.value);
+                Object.assign(this.maps[this.activeConfiguration._id], conf);
+                this.mapBuilder.setConfiguration(this.maps[this.activeConfiguration._id]);
+            }
+        });
+        configDisplay.appendChild(bar);
+        configDisplay.appendChild(this.configInput);
+        this.mapPane.bottom.appendChild(configDisplay);
+
+        this.mapBuilder = new L.MapBuilder(map, options.builder); //initialize the map builder
+        this.mapBuilder.on('set:configuration', (e) => {
+            this.activeConfiguration = e.configuration;
+        });
+        this.mapBuilder.on('clear', () => {
+            this._isLoaded = false;
+        });
+        this.mapBuilder.on('reload', () => {
+            this._isLoaded = true;
+            this.configInput.value = JSON.stringify(this.activeConfiguration, (key, value) => {
+                return value; //do nothing
+            }, 4);
+        });
+        this._drawEvents();
+        this.layersControl.setBuilder(this.mapBuilder); //link the layerscontrol to the mapBuilder
+
         this.sidebarOverlay = new Sidebar(this.element, {
             className: 'pane-sm scrollable'
         });
         this.sidebarOverlay.show();
+
         this.sidebarOverlayTabGroup = new TabGroup(this.sidebarOverlay);
         this.sidebarOverlayTabGroup.addItem({
             id: `regions`,
@@ -350,26 +376,20 @@ class MapExtension extends GuiExtension {
             id: `markers`,
             name: `Markers`
         });
-        this.sidebarOverlay.addList('regions');
-        this.sidebarOverlay.regions.addSearch({
-            placeholder: 'Search regions'
-        });
 
-        this.sidebarOverlay.addList(`markers`);
-        this.sidebarOverlay.markers.hide();
-        this.sidebarOverlay.markers.addSearch({
-            placeholder: 'Search markers'
-        });
         this.sidebarOverlayTabGroup.addClickListener(`regions`, () => {
-            this.sidebarOverlay.regions.show();
-            this.sidebarOverlay.markers.hide();
+            this.layersControl.regionsWidget.show();
+            this.layersControl.markersWidget.hide();
         });
         this.sidebarOverlayTabGroup.addClickListener(`markers`, () => {
-            this.sidebarOverlay.markers.show();
-            this.sidebarOverlay.regions.hide();
+            this.layersControl.markersWidget.show();
+            this.layersControl.regionsWidget.hide();
         });
+        this.sidebarOverlay.addList(this.layersControl.regionsWidget);
+        this.sidebarOverlay.addList(this.layersControl.markersWidget);
+
         //this.regionAnalyzer = new RegionAnalyzer();
-        this._addListeners();
+        //this._addListeners();
         gui.workspace.addSpace(this, this.maps, false); //without overwriting
         //saving to workspace and retriving loaded worspace
         if (gui.workspace instanceof Workspace) {
@@ -406,11 +426,101 @@ class MapExtension extends GuiExtension {
     } //end activate
 
 
-    deactivate() { /// the extension has to take care of removing all the buttons and element appended
-        //this.sidebar.remove();
-        //this.sidebarOverlay.remove();
+    deactivate() { /// the extension has to take care of removing all the buttons and element appended outside of the main extension pane
         this.removeToggleButton(this.constructor.name); //this is compulsory to leave the interface clean
         super.deactivate(); //we will also call the super class deactivate method
+    }
+
+    _setSettings() {
+        let newSet = util.clone(this._settings);
+        let needMapRel = false;
+        let needExtRel = false;
+        let modal = new Modal({
+            title: ``,
+            width: '600px',
+            height: 'auto',
+            noCloseIcon: true,
+            parent: this,
+            onsubmit: () => {
+                if (needExtRel) {
+                    this.deactivate();
+                    this.activate();
+                    this.show();
+                }
+            }
+
+        });
+        let body = document.createElement('DIV');
+        body.className = 'cellconteiner';
+        let left = util.div('cell');
+        left.style.width = '45%';
+        let right = util.div('cell');
+        right.style.width = '45%';
+        body.appendChild(left);
+        body.appendChild(right);
+        let ltitle = document.createElement('H4');
+        ltitle.innerHTML = 'Interface';
+        let rtitle = document.createElement('H4');
+        rtitle.innerHTML = 'Map';
+        left.appendChild(ltitle);
+        right.appendChild(rtitle);
+        let cleft = util.div('cellconteiner');
+        let cright = util.div('cellconteiner');
+        left.appendChild(cleft);
+        right.appendChild(cright);
+
+        input.checkButton({
+            parent: cleft,
+            autofocus: true, //needed to use esc and enter modal commands
+            className: 'cell',
+            active: this._settings.multiRegionSelect,
+            text: "Region multi select",
+            onactivate: () => {
+                this._settings.multiRegionSelect = true;
+            },
+            ondeactivate: () => {
+                this._settings.multiRegionSelect = false;
+            }
+        });
+        input.checkButton({
+            parent: cleft,
+            className: 'cell',
+            active: this._settings.multiMarkerSelect,
+            text: "Marker multi select",
+            onactivate: () => {
+                this._settings.multiMarkerSelect = true;
+            },
+            ondeactivate: () => {
+                this._settings.multiMarkerSelect = false;
+            }
+        });
+        input.checkButton({
+            parent: cleft,
+            className: 'cell',
+            active: this._settings.zoomControl,
+            text: "Zoom control",
+            onactivate: () => {
+                this._settings.zoomControl = true;
+                needExtRel = true;
+            },
+            ondeactivate: () => {
+                this._settings.zoomControl = false;
+                needExtRel = true;
+            }
+        });
+        input.selectInput({
+            parent: cright,
+            className: 'form-control cell',
+            label: 'CRS',
+            choices: Object.keys(CRSs),
+            value: this._settings.crs,
+            oninput: (inp) => {
+                this._settings.crs = inp.value;
+                needExtRel = true;
+            }
+        });
+        modal.addBody(body);
+        modal.show();
     }
 
 
@@ -441,7 +551,6 @@ class MapExtension extends GuiExtension {
                 ic = '';
         };
 
-
         let ctn = new Menu();
         ctn.append(new MenuItem({
             label: 'Export map',
@@ -466,57 +575,20 @@ class MapExtension extends GuiExtension {
                     noLink: true
                 }, (id) => {
                     if (id > 0) {
-                        if (configuration == this.mapBuilder.getConfiguration()) {
+                        if (this.activeConfiguration._id == configuration._id) {
                             this.mapBuilder.clear();
+                            this.mapBuilder.setConfiguration({
+                                type: 'map'
+                            });
                         }
-                        this.mapsList.removeItem(`${configuration._id}`);
+                        this.mapsList.removeItem(configuration._id);
                         delete this.maps[configuration._id];
                     }
                 });
 
             }
         }));
-        ctn.append(new MenuItem({
-            label: 'Edit zoom',
-            type: 'normal',
-            click: () => {
-                this.mapsList.showDetails(configuration._id);
-            }
-        }));
-        let tools = util.div('table-container toolbox');
-        let first = util.div();
-        let second = util.div();
-        tools.onclick = (e) => e.stopPropagation();
-        tools.appendChild(first);
-        tools.appendChild(second);
-        input.input({
-            label: 'Max. zoom: ',
-            parent: first,
-            type: "range",
-            className: 'form-control vmiddle',
-            id: `numMaxZoom_${configuration._id}`,
-            value: 0,
-            min: 0,
-            max: 20,
-            by: 1,
-            width: '5px',
-            onchange: (inp) => {
-                this.mapBuilder.setMaxZoom(Number(inp.value));
-            }
-        });
-        input.input({
-            type: "range",
-            parent: second,
-            label: 'Min. zoom: ',
-            className: 'form-control vmiddle',
-            id: `numMinZoom_${configuration._id}`,
-            value: 0,
-            max: 0,
-            min: -10,
-            oninput: (inp) => {
-                this.mapBuilder.setMinZoom(Number(inp.value));
-            }
-        });
+
 
         let title = document.createElement('STRONG');
         title.innerHTML = configuration.name;
@@ -525,7 +597,6 @@ class MapExtension extends GuiExtension {
             id: configuration._id,
             title: title,
             key: `${configuration.name} ${configuration.date} ${configuration.authors}`,
-            details: tools,
             icon: ic,
             toggle: true,
             oncontextmenu: () => {
@@ -551,507 +622,12 @@ class MapExtension extends GuiExtension {
         this.mapsList.activeItem(configuration._id);
         //this.mapsList.showDetails(configuration._id);
         this.mapPane.show();
+        gui.viewTrick();
     }
 
-    _removeRegion(id) {
-        this.regions[`${id}`].where.removeLayer(this.regions[`${id}`].layer);
-        this.sidebarOverlay.regions.removeItem(`${id}`);
-        delete this.regions[`${id}`];
-        delete this.activeConfiguration.layers.drawnItems.layers[`${id}`]
-    }
-
-    _addRegion(e) {
-        let layer = e.layer;
-        let layerConfig = e.configuration;
-        let where = e.where;
-        this.regions[layerConfig._id] = {
-            layer: layer,
-            configuration: layerConfig,
-            where: where
-        }
-        layer.on('click', () => {
-            if (!this.sidebarOverlay.regions.items[layerConfig._id].element.className.includes('active')) {
-                this.sidebarOverlay.regions.activeItem(layerConfig._id);
-                this.map.setView(layer.getLatLngs()[0][0]);
-                this.selectedRegions.push(layerConfig._id);
-                layer.setStyle({
-                    fillOpacity: 0.8
-                });
-            } else {
-                this.sidebarOverlay.regions.deactiveItem(layerConfig._id);
-                this.selectedRegions.splice(this.selectedRegions.indexOf(e), 1);
-                layer.setStyle({
-                    fillOpacity: layerConfig.options.fillOpacity || 0.3
-                });
-            }
-        });
-        let inpC = document.createElement('INPUT');
-        let inp = document.createElement('INPUT');
-
-        inp.type = 'text';
-        inp.className = 'list-input';
-        inp.readOnly = true;
-        inp.onchange = () => {
-            this.sidebarOverlay.regions.setKey(layerConfig._id, inp.value);
-            layerConfig.name = inp.value;
-            layer.setTooltipContent(inp.value);
-            inp.readOnly = true;
-        }
-        inp.onblur = () => {
-            inp.readOnly = true;
-        }
-
-        let rename = new MenuItem({
-            label: 'Rename',
-            click: () => {
-                inp.readOnly = false;
-            }
-        });
-
-        let del = new MenuItem({
-            label: 'Delete',
-            click: () => {
-                if (this.selectedRegions.length === 0) {
-                    this.selectedRegions.push(layerConfig._id);
-                }
-                this._deleteRegionsCheck(this.selectedRegions);
-                this.selectedRegions = [];
-            }
-        });
-
-        let comp = new MenuItem({
-            label: 'Compute',
-            click: () => {
-                if (this.selectedRegions.length === 0) {
-                    this.regionAnalyzer.computeRegionStats(layer);
-                } else {
-                    this.selectedRegions.map((id) => {
-                        this.regionAnalyzer.computeRegionStats(id);
-                    });
-                }
-
-            }
-        });
-        let exp = new MenuItem({
-            label: 'Export statistics',
-            click: () => {
-                if (this.selectedRegions.length === 0) {
-                    this.exportsRegions([layer]);
-                } else {
-                    this.exportsRegions(this.selectedRegions);
-                }
-            }
-        });
-        let context = () => {
-            let color = new Menu();
-            this._colors.map((col) => {
-                color.append(new MenuItem({
-                    label: col,
-                    type: 'radio',
-                    checked: col === layerConfig.options.color && col === layerConfig.options.color,
-                    click: () => {
-                        layer.setStyle({
-                            color: col,
-                            fillColor: col
-                        });
-                        layerConfig.options.color = col;
-                        layerConfig.options.fillColor = col;
-                    }
-                }));
-            });
-            color.append(new MenuItem({
-                label: 'Define new',
-                click: () => {
-                    this._defineNewColor();
-                }
-            }));
-            let contx = new Menu();
-            contx.append(rename);
-            contx.append(del);
-            contx.append(exp);
-            contx.append(comp);
-            contx.append(new MenuItem({
-                label: 'Color',
-                type: 'submenu',
-                submenu: color
-            }));
-            contx.popup();
-        }
-        inp.placeholder = 'Region name';
-        inp.value = layerConfig.name;
-        inp.size = layerConfig.name.length + 1;
-        layer.on('contextmenu', () => {
-            context();
-        })
-        this.sidebarOverlay.regions.addItem({
-            id: layerConfig._id,
-            title: inp,
-            key: layerConfig.name,
-            toggle: true,
-            oncontextmenu: () => {
-                context();
-            },
-            onclick: {
-                active: () => {
-                    this.map.setView(layer.getLatLngs()[0][0]);
-                    this.selectedRegions.push(layerConfig._id);
-                    layer.setStyle({
-                        fillOpacity: 0.8
-                    });
-                    gui.notify(`${layerConfig.name} selected, (${this.selectedRegions.length} tot)`);
-                },
-                deactive: () => {
-                    this.selectedRegions.splice(this.selectedRegions.indexOf(layerConfig._id), 1);
-                    gui.notify(`${layerConfig.name} deselected, (${this.selectedRegions.length} tot)`);
-                    layer.setStyle({
-                        fillOpacity: layerConfig.options.fillOpacity || 0.3
-                    });
-                }
-            }
-        });
-    }
-
-    _removeMarker(id) {
-        this.markers[`${id}`].where.removeLayer(this.markers[`${id}`].layer);
-        this.sidebarOverlay.markers.removeItem(`${id}`);
-        delete this.markers[`${id}`];
-        delete this.activeConfiguration.layers.drawnItems.layers[`${id}`]
-    }
-
-    _addMarker(e) {
-        let layer = e.layer;
-        let layerConfig = e.configuration;
-        let where = e.where;
-
-        let context = new Menu();
-        this.markers[layerConfig._id] = {
-            configuration: layerConfig,
-            layer: layer,
-            where: where
-        };
-
-        let title = input.input({
-            type: `text`,
-            id: `txtmarker_${layerConfig._id}`,
-            value: layerConfig.name,
-            className: `list-input`,
-            readOnly: true,
-            onchange: (inp) => {
-                this.sidebarOverlay.markers.setKey(layerConfig._id, inp.value);
-                layer.setTooltipContent(title.value);
-                layerConfig.name = inp.value;
-                inp.readOnly = true;
-            },
-            onblur: (inp) => {
-                inp.readOnly = true;
-            }
-        });
-        title.size = layerConfig.name.length + 1;
-
-        context.append(new MenuItem({
-            label: 'Rename',
-            click: () => {
-                title.readOnly = false;
-            }
-        }));
-
-        context.append(new MenuItem({
-            label: 'Edit details',
-            click: () => {
-                this._editMarkerDetails(e);
-            }
-        }));
-
-        context.append(new MenuItem({
-            label: 'Delete',
-            click: () => {
-                this._deleteMarkerCheck(e);
-            }
-        }));
 
 
-        this.sidebarOverlay.markers.addItem({
-            id: layerConfig._id,
-            title: title,
-            key: layerConfig.name,
-            toggle: true,
-            oncontextmenu: () => {
-                context.popup();
-            },
-            onclick: {
-                active: () => {
-                    this.sidebarOverlay.markers.deactiveAll();
-                    this.map.setView(layer.getLatLng());
-                    layer.openPopup();
-                },
-                deactive: () => {
-                    layer.closePopup();
-                }
-            }
-        });
 
-        layer.on('click', () => {
-            this.sidebarOverlay.markers.deactiveAll();
-            this.sidebarOverlay.markers.activeItem(layerConfig._id);
-            this.map.setView(layer.getLatLng());
-        });
-
-        layer.on('contextmenu', () => {
-          context.popup();
-        })
-
-        layer.on('dblclick', () => {
-            this._editMarkerDetails(e);
-        });
-    }
-
-    _addListeners() {
-        this.map.on(L.Draw.Event.CREATED, (e) => {
-            let type = e.layerType,
-                layer = e.layer;
-            let config = {
-                type: type,
-                options: layer.options
-            }
-            if (layer.getLatLngs) {
-                config.latlngs = layer.getLatLngs();
-            }
-            if (layer.getLatLng) {
-                config.latlng = layer.getLatLng();
-            }
-            if (layer.getRadius) {
-                config.radius = layer.getRadius();
-            }
-            this.mapBuilder.loadLayer(config, this.mapBuilder._drawnItems);
-            this.activeConfiguration.layers.drawnItems.layers[config._id] = config;
-
-        });
-
-        // when items are removed
-        this.map.on(L.Draw.Event.DELETED, (e) => {
-            var layers = e.layers;
-            layers.eachLayer((layer) => {
-                this.mapBuilder._drawnItems.removeLayer(layer);
-                if (layer instanceof L.Marker) {
-                    this._removeMarker();
-                } else if (layer instanceof L.Rectangle) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Polygon) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Circle) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Polyline) {}
-            });
-        });
-
-        this.map.on(L.Draw.Event.EDITED, (e) => {
-            let layers = e.layers;
-            layers.eachLayer((layer) => {
-                let type = null;
-                if (layer instanceof L.Marker) {
-                    type = 'marker';
-                } else if (layer instanceof L.Rectangle) {
-                    type = 'rectangle';
-                } else if (layer instanceof L.Polygon) {
-                    type = 'polygon';
-                } else if (layer instanceof L.Circle) {
-                    type = 'circle';
-                } else if (layer instanceof L.Polyline) {
-                    type = 'polyline';
-                }
-                let config = {
-                    type: type,
-                    options: layer.options
-                }
-                if (layer.getLatLngs) {
-                    config.latlngs = layer.getLatLngs();
-                }
-                if (layer.getLatLng) {
-                    config.latlng = layer.getLatLng();
-                }
-                if (layer.getRadius) {
-                    config.radius = layer.getRadius();
-                }
-
-            });
-        });
-
-
-        this.mapBuilder.on('error', (e) => {
-            gui.notify(e.error);
-        });
-
-        //when clean mapmanager clean interface
-        this.mapBuilder.on('clear', () => {
-            this.sidebarOverlay.regions.clean();
-            this.sidebarOverlay.markers.clean();
-            this.selectedRegions = [];
-            this.regions = {};
-            this.markers = {};
-        });
-
-        this.mapBuilder.on('set:configuration', (e) => {
-            this.activeConfiguration = e.configuration;
-        });
-
-        this.mapBuilder.on('add:drawnitems', (e) => {
-            this.activeConfiguration.layers.drawnItems = e.configuration;
-        });
-
-    }
-
-    _defineNewColor() {
-        let modal = new Modal({
-            title: "Define color",
-            height: "auto"
-        });
-        let body = util.div();
-        let color = '#000000';
-        let colorPickerContainer = util.div('color-picker-wrapper');
-        colorPickerContainer.style.backgroundColor = color;
-        body.appendChild(colorPickerContainer);
-        input.input({
-            parent: colorPickerContainer,
-            id: 'cP0',
-            className: '',
-            value: color,
-            label: '',
-            type: 'color',
-            oninput: (inp) => {
-                color = inp.value;
-                document.getElementById('cP1').value = inp.value;
-                colorPickerContainer.style.backgroundColor = inp.value;
-            }
-        });
-        input.input({
-            parent: body,
-            id: 'cP1',
-            className: '',
-            label: '',
-            value: color,
-            type: 'text',
-            placeholder: 'color',
-            oninput: (inp) => {
-                color = inp.value;
-                document.getElementById('cP0').value = inp.value;
-                colorPickerContainer.style.backgroundColor = inp.value;
-            }
-        });
-        let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
-        buttonsContainer.addButton({
-            id: "CancelColor0",
-            text: "Cancel",
-            action: () => {
-                modal.destroy();
-            },
-            className: "btn-default"
-        });
-        buttonsContainer.addButton({
-            id: "SaveColor0",
-            text: "Add",
-            action: () => {
-                this._colors.push(color);
-                modal.destroy();
-            },
-            className: "btn-default"
-        });
-        let footer = util.div();
-        footer.appendChild(buttonsContainer.element);
-        modal.addBody(body);
-        modal.addFooter(footer);
-        modal.show();
-
-
-    }
-
-    _editMarkerDetails(e) {
-        let marker = e.layer;
-        let configuration = e.configuration;
-        // OPEN A MODAL ASKING FOR DETAILS.
-        var modal = new Modal({
-            title: "Edit marker details",
-            height: "auto"
-        });
-        let grid = new Grid(2, 2);
-        let txtMarkerName = input.input({
-            type: "text",
-            id: `txtMarkerName_${configuration._id}_modal`,
-            value: configuration.name,
-            label: 'Marker name'
-        });
-        grid.addElement(txtMarkerName, 0, 1);
-        let taMarkerDetails = document.createElement("TEXTAREA");
-        taMarkerDetails.id = "tamarkerdetails";
-        taMarkerDetails.value = configuration.details;
-        taMarkerDetails.rows = 5
-        taMarkerDetails.style.width = '100%';
-        let lblMarkerDetails = document.createElement("LABEL");
-        lblMarkerDetails.htmlFor = "tamarkerdetails";
-        lblMarkerDetails.innerHTML = "Marker details: ";
-        grid.addElement(lblMarkerDetails, 1, 0);
-        grid.addElement(taMarkerDetails, 1, 1);
-        let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
-        buttonsContainer.addButton({
-            id: "CancelMarker00",
-            text: "Cancel",
-            action: () => {
-                modal.destroy();
-            },
-            className: "btn-default"
-        });
-        buttonsContainer.addButton({
-            id: "SaveMarker00",
-            text: "Save",
-            action: () => {
-                this.sidebarOverlay.markers.setTitle(configuration._id, txtMarkerName.value);
-                configuration.name = txtMarkerName.value;
-                configuration.details = taMarkerDetails.value;
-                marker.setTooltipContent(txtMarkerName.value);
-                marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
-                modal.destroy();
-            },
-            className: "btn-default"
-        });
-        let footer = util.div();
-        footer.appendChild(buttonsContainer.element);
-
-        modal.addBody(grid.element);
-        modal.addFooter(footer);
-        modal.show();
-    }
-
-    _deleteMarkerCheck(e) {
-        dialog.showMessageBox({
-            title: 'Delete selected marker?',
-            type: 'warning',
-            buttons: ['No', 'Yes'],
-            message: `Delete the selected marker? (no undo available)`,
-            detail: `Marker to be deleted: ${e.configuration.name}.`,
-            noLink: true
-        }, (id) => {
-            if (id > 0) {
-                this._removeMarker(e.layer._id);
-            }
-        });
-    }
-
-    _deleteRegionsCheck(regions) {
-        dialog.showMessageBox({
-            title: 'Delete selected regions?',
-            type: 'warning',
-            buttons: ['No', "Yes"],
-            message: `Delete the selected regions? (no undo available)`,
-            detail: `Regions to be deleted: ${regions.map((id) => { return this.regions[id].configuration.name })}`,
-            noLink: true
-        }, (id) => {
-            if (id > 0) {
-                regions.map((id) => {
-                    this._removeRegion(id);
-                });
-                regions = [];
-            }
-        });
-    }
 
 
     exportsRegions(regions) {
@@ -1076,7 +652,36 @@ class MapExtension extends GuiExtension {
 
 
     createMap() {
-        this.addNewMap(mapio.baseConfiguration());
+        let body = util.div();
+        let name = input.input({
+            id: 'newmapname-modal',
+            parent: body,
+            value: '',
+            autofocus: true,
+            label: '',
+            className: 'form-control',
+            width: '100%',
+            placeholder: 'new map name',
+            title: 'new map name',
+            type: 'text'
+        });
+        let modal = new Modal({
+            title: 'choose a name for the new map',
+            width: '600px',
+            height: 'auto',
+            noCloseIcon: true,
+            parent: this,
+            onsubmit: () => {
+                let conf = mapio.baseConfiguration();
+                conf.name = name.value;
+                this.addNewMap(conf);
+            },
+            oncancel: () => {}
+        });
+
+        modal.addBody(body);
+        modal.show();
+
     }
 
 
@@ -1093,6 +698,7 @@ class MapExtension extends GuiExtension {
             }],
             properties: ['openFile']
         }, (filenames) => {
+            if (!filenames) return;
             if (filenames.length === 0) return;
             fs.stat(filenames[0], (err, stats) => {
                 if (err) return;
@@ -1129,16 +735,16 @@ class MapExtension extends GuiExtension {
                 imageUrl: path,
                 tilesUrlTemplate: path,
                 maxZoom: 8,
+                maxNativeZoom: 0,
                 author: 'unknown',
-                type: 'imageLayer',
+                type: options.type || 'imageOverlay',
                 opacity: 1,
                 //tileSize: 256,
                 tileSize: [dim.width / siz * 256, dim.height / siz * 256],
                 bounds: [
                     [-Math.floor(dim.height * 256 / siz), 0],
                     [0, Math.floor(dim.width * 256 / siz)]
-                ],
-                size: 256
+                ]
             });
         } else if (path.endsWith('.csv')) {
             // this.addLayer({
@@ -1188,11 +794,213 @@ class MapExtension extends GuiExtension {
         }
     }
 
-
+    //add the given laye to the current map
     addLayer(conf) {
         conf = mapio.parseLayer(conf);
         this.mapBuilder.loadLayer(conf);
         this.activeConfiguration.layers[`layer_${conf._id}`] = conf;
+    }
+
+
+    _modaltilelayer() {
+        let body = util.div('cellconteiner');
+        let name = input.input({
+            id: 'namenewlayer',
+            type: 'text',
+            label: '',
+            className: 'cell',
+            placeholder: 'name',
+            parent: body,
+            value: ''
+        });
+        let url = input.input({
+            id: 'urlnewlayer',
+            type: 'text',
+            label: '',
+            className: 'cell',
+            placeholder: 'tiles url template',
+            parent: body,
+            value: ''
+        });
+        let tileSize = input.input({
+            id: 'tilesizenewlayer',
+            type: 'text',
+            label: '',
+            className: 'cell',
+            placeholder: 'size',
+            parent: body,
+            value: ''
+        });
+        let minz = input.input({
+            id: 'minzoomnewlayer',
+            type: 'number',
+            label: '',
+            className: 'cell',
+            placeholder: 'minZoom',
+            parent: body,
+            value: 0
+        });
+        let maxz = input.input({
+            id: 'maxzoomnewlayer',
+            type: 'number',
+            label: '',
+            className: 'cell',
+            placeholder: 'maxZoom',
+            parent: body,
+            value: 10
+        });
+        let base = true;
+        input.checkButton({
+            id: 'basenewlayer',
+            parent: body,
+            text: 'base layer',
+            className: 'cell',
+            active: true,
+            ondeactivate: () => {
+                base = false;
+            },
+            onactivate: () => {
+                base = true;
+            }
+        });
+        (new Modal({
+            title: 'Add a tileLayer',
+            body: body,
+            width: '200px',
+            onsubmit: () => {
+                this.addLayer({
+                    name: name.value,
+                    type: 'tileLayer',
+                    tilesUrlTemplate: url.value,
+                    tileSize: JSON.parse(tileSize.value || 256) || 256,
+                    minNativeZoom: minz.value,
+                    maxNativeZoom: maxz.value,
+                    minZoom: minz.value,
+                    maxZoom: maxz.value,
+                    baseLayer: base
+                });
+            }
+        })).show();
+    }
+
+
+    _modalGuideLayer() {
+        let body = util.div('cellconteiner');
+        let name = input.input({
+            id: 'namenewlayer',
+            type: 'text',
+            label: '',
+            className: 'cell',
+            placeholder: 'name',
+            parent: body,
+            value: ''
+        });
+        let size = input.input({
+            id: 'sizenewlayer',
+            type: 'number',
+            label: '',
+            className: 'cell',
+            placeholder: 'size',
+            parent: body,
+            value: ''
+        });
+        let tilesize = input.input({
+            id: 'tilesizenewlayer',
+            type: 'number',
+            label: '',
+            className: 'cell',
+            placeholder: 'tilesize',
+            parent: body,
+            value: ''
+        });
+
+        (new Modal({
+            title: 'Add a tileLayer',
+            body: body,
+            width: '200px',
+            onsubmit: () => {
+                this.addLayer({
+                    name: name.value || 'guide',
+                    type: 'guideLayer',
+                    size: JSON.parse(size.value) || 256,
+                    tileSize: JSON.parse(tilesize.value) || 256
+                });
+            }
+        })).show();
+    }
+
+
+    _drawEvents() {
+        this.mapBuilder.map.on(L.Draw.Event.CREATED, (e) => {
+            let type = e.layerType,
+                layer = e.layer;
+            let config = {
+                type: type,
+                options: layer.options
+            }
+            if (layer.getLatLngs) {
+                config.latlngs = layer.getLatLngs();
+            }
+            if (layer.getLatLng) {
+                config.latlng = layer.getLatLng();
+            }
+            if (layer.getRadius) {
+                config.radius = layer.getRadius();
+            }
+            this.mapBuilder.loadLayer(config, this.mapBuilder._drawnItems);
+
+            let key = util.nextKey(this.mapBuilder._configuration.layers.drawnItems.layers);
+            this.mapBuilder._configuration.layers.drawnItems.layers[key] = config;
+        });
+
+        // when items are removed
+        this.mapBuilder.map.on(L.Draw.Event.DELETED, (e) => {
+            var layers = e.layers;
+            layers.eachLayer((layer) => {
+                this.mapBuilder._drawnItems.removeLayer(layer);
+                if (layer instanceof L.Marker) {
+                    this._removeMarker(layer._id);
+                } else if (layer instanceof L.Rectangle) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Polygon) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Circle) {
+                    this._removeRegion(layer._id);
+                } else if (layer instanceof L.Polyline) {}
+            });
+        });
+
+        this.mapBuilder.map.on(L.Draw.Event.EDITED, (e) => {
+            let layers = e.layers;
+            layers.eachLayer((layer) => {
+                let type = null;
+                if (layer instanceof L.Marker) {
+                    type = 'marker';
+                } else if (layer instanceof L.Rectangle) {
+                    type = 'rectangle';
+                } else if (layer instanceof L.Polygon) {
+                    type = 'polygon';
+                } else if (layer instanceof L.Circle) {
+                    type = 'circle';
+                } else if (layer instanceof L.Polyline) {
+                    type = 'polyline';
+                }
+                let config = {
+                    type: type,
+                    options: layer.options
+                }
+                if (layer.getLatLngs) {
+                    config.latlngs = layer.getLatLngs();
+                }
+                if (layer.getLatLng) {
+                    config.latlng = layer.getLatLng();
+                }
+                if (layer.getRadius) {
+                    config.radius = layer.getRadius();
+                }
+                this.mapBuilder._configuration.layers.drawnItems.layers[layer._id] = config;
+            });
+        });
     }
 
 

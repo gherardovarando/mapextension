@@ -28,6 +28,8 @@
         "leaflet-geometryutil": "^0.8.0",
         "leaflet-snap": "0.0.4",
         "leaflet.markercluster": "^1.0.4",
-        "electrongui": "github:gherardovarando/electrongui"
+        "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
+        "electrongui": "github:gherardovarando/electrongui",
+        "tiff-to-png": ""
     }
 }

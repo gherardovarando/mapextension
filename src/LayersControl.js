@@ -26,11 +26,13 @@ const {
     ToggleElement,
     ButtonsContainer,
     Modal,
-    gui
+    gui,
+    colors
 } = require('electrongui');
 const {
     Menu,
-    MenuItem
+    MenuItem,
+    dialog
 } = require('electron').remote;
 
 /**
@@ -43,10 +45,10 @@ class LayersControl {
     /**
      * Class constructor.
      */
-    constructor(builder, configuration) {
+    constructor() {
 
-        this.configuration = configuration;
-        this.element = util.div('layers-widget');
+        //create layers-widget
+        this.layersWidget = new ToggleElement(util.div('layers-widget'));
         this.content = util.div('content');
         this.tabs = new TabGroup(this.content);
         this.baselist = new ListGroup(this.content);
@@ -86,11 +88,59 @@ class LayersControl {
             this.datalist.show();
             this.overlaylist.hide();
         });
-        this.element.appendChild(this.content);
+        this.layersWidget.appendChild(this.content);
         this.baseLayer = null;
-        if (builder) {
-            this.setBuilder(builder);
-        }
+
+        //create region-widget
+        this.regionsWidget = new ListGroup('regionslist');
+        this.regionsWidget.addSearch({
+            placeholder: 'Search regions'
+        });
+
+        //create markers widget
+        this.markersWidget = new ListGroup('markerslist');
+        this.markersWidget.hide();
+        this.markersWidget.addSearch({
+            placeholder: 'Search markers'
+        });
+
+
+    }
+
+    /**
+     * Sets the map manager and listens to its events.
+     * @param {builder} builder The map builder.
+     */
+    setBuilder(builder) {
+        this.builder = builder;
+        this.selectedRegions = [];
+        this.selectedMarkers = [];
+
+        this.builder.on('clear', () => {
+            this.baselist.clean();
+            this.tileslist.clean();
+            this.overlaylist.clean();
+            this.datalist.clean();
+            this.baseLayer = null;
+        });
+
+        this.builder.on('error', (e) => {
+            gui.notify(e.error);
+        });
+
+        //when clean mapmanager clean interface
+        this.builder.on('clear', () => {
+            this.regionsWidget.clean();
+            this.markersWidget.clean();
+            this.selectedRegions = [];
+            gui.viewTrick();
+        });
+
+
+        this.builder.on('add:drawnitems', (e) => {
+            this.builder._configuration.layers.drawnItems = e.configuration;
+            gui.viewTrick();
+        });
 
     }
 
@@ -98,7 +148,7 @@ class LayersControl {
 
     }
 
-    addLayer(layer, configuration, map) {
+    addLayer(layer, configuration, where) {
         let tools;
         let customMenuItems = [];
         let list;
@@ -116,7 +166,7 @@ class LayersControl {
                 if (configuration.baseLayer) {
                     if (!this.baseLayer) {
                         this.baseLayer = layer;
-                        this.builder.map.addLayer(this.baseLayer);
+                        where.addLayer(this.baseLayer);
                     }
                 }
                 customMenuItems.push(new MenuItem({
@@ -125,9 +175,9 @@ class LayersControl {
                         if (this.baseLayer === layer) {
                             return;
                         }
-                        this.builder.map.removeLayer(layer);
+                        where.removeLayer(layer);
                         list.removeItem(`${configuration._id}`);
-                        delete this.configuration.layers[`${configuration._key}`];
+                        delete gui.mapExtension.activeConfiguration.layers[`${configuration._key}`];
                     }
                 }));
                 customMenuItems.push(new MenuItem({
@@ -154,7 +204,7 @@ class LayersControl {
                     label: 'Delete',
                     click: () => {
                         this.tileslist.removeItem(`${configuration._id}`);
-                        delete this.configuration.layers[`${configuration._key}`];
+                        delete gui.mapExtension.activeConfiguration.layers[`${configuration._key}`];
                     }
                 }));
                 list = this.tileslist;
@@ -173,7 +223,7 @@ class LayersControl {
                             return;
                         }
                         this.overlaylist.removeItem(`${configuration._id}`);
-                        delete this.configuration.layers[`${configuration._key}`];
+                        delete gui.mapExtension.activeConfiguration.layers[`${configuration._key}`];
                     }
                 }));
                 list = this.overlaylist;
@@ -188,16 +238,119 @@ class LayersControl {
                     label: 'Delete',
                     click: () => {
                         this.overlaylist.removeItem(`${configuration._id}`);
-                        delete this.configuration.layers[`${configuration._key}`];
+                        delete gui.mapExtension.activeConfiguration.layers[`${configuration._key}`];
                     }
                 }));
                 list = this.overlaylist;
+                break;
+            case 'polygon':
+                list = this.regionsWidget;
+                this.builder._drawnItems.addLayer(layer);
+                customMenuItems.push(new MenuItem({
+                    label: 'Color',
+                    submenu: colors.menu({
+                        color: configuration.options.color,
+                        defineNew: true,
+                        click: (col) => {
+                            layer.setStyle({
+                                color: col,
+                                fillColor: col
+                            });
+                            configuration.options.color = col;
+                            configuration.options.fillColor = col;
+                        }
+                    })
+                }));
+                customMenuItems.push(new MenuItem({
+                    label: 'Delete',
+                    click: () => {
+                        this._deleteRegionsCheck([{
+                            configuration: configuration,
+                            layer: layer
+                        }]);
+                    }
+                }));
+                break;
+            case 'rectangle':
+                list = this.regionsWidget;
+                this.builder._drawnItems.addLayer(layer);
+                customMenuItems.push(new MenuItem({
+                    label: 'Color',
+                    submenu: colors.menu({
+                        color: configuration.options.color,
+                        defineNew: true,
+                        click: (col) => {
+                            layer.setStyle({
+                                color: col,
+                                fillColor: col
+                            });
+                            configuration.options.color = col;
+                            configuration.options.fillColor = col;
+                        }
+                    })
+                }));
+                customMenuItems.push(new MenuItem({
+                    label: 'Delete',
+                    click: () => {
+                        this._deleteRegionsCheck([{
+                            configuration: configuration,
+                            layer: layer
+                        }]);
+                    }
+                }));
+                break;
+            case 'circle':
+                list = this.regionsWidget;
+                this.builder._drawnItems.addLayer(layer);
+                customMenuItems.push(new MenuItem({
+                    label: 'Color',
+                    submenu: colors.menu({
+                        color: configuration.options.color,
+                        defineNew: true,
+                        click: (col) => {
+                            layer.setStyle({
+                                color: col,
+                                fillColor: col
+                            });
+                            configuration.options.color = col;
+                            configuration.options.fillColor = col;
+                        }
+                    })
+                }));
+                customMenuItems.push(new MenuItem({
+                    label: 'Delete',
+                    click: () => {
+                        this._deleteRegionsCheck([{
+                            configuration: configuration,
+                            layer: layer
+                        }]);
+                    }
+                }));
+                break;
+            case 'polyline':
+                list = this.regionsWidget;
+                break;
+            case 'marker':
+                list = this.markersWidget;
+                this.builder._drawnItems.addLayer(layer);
+                customMenuItems.push(new MenuItem({
+                    label: 'Delete',
+                    click: () => {
+                        this._deleteMarkerCheck(layer, configuration);
+                    }
+                }));
+                customMenuItems.push(new MenuItem({
+                    label: 'Edit',
+                    click: () => {
+                        this._editMarkerDetails(layer, configuration);
+                    }
+                }));
                 break;
             default:
                 list = this.overlaylist;
 
         }
-        this._addToList(layer, customMenuItems, tools, configuration, list);
+        this._addToList(layer, configuration, where, customMenuItems, tools, list);
         if (typeof layer.on === 'function') {
             layer.on('remove', (e) => {
                 list.deactiveItem(`${e.target._id}`);
@@ -207,23 +360,10 @@ class LayersControl {
                 list.activeItem(`${e.target._id}`);
             });
         }
+        gui.viewTrick();
     }
 
-    /**
-     * Sets the map manager and listens to its events.
-     * @param {builder} builder The map manager.
-     */
-    setBuilder(builder) {
-        this.builder = builder;
 
-        this.builder.on('clear', () => {
-            this.baselist.clean();
-            this.tileslist.clean();
-            this.overlaylist.clean();
-            this.datalist.clean();
-            this.baseLayer = null;
-        });
-    }
 
 
     /**
@@ -235,7 +375,7 @@ class LayersControl {
      * @param {Object} configuration json layer configuration.
      * @param {ListGroup} list target ListGroup.
      */
-    _addToList(layer, customMenuItems, tools, configuration, list) {
+    _addToList(layer, configuration, where, customMenuItems, tools, list) {
         let txtTitle = input.input({
             value: configuration.name,
             className: 'list-input',
@@ -248,26 +388,16 @@ class LayersControl {
                 txtTitle.readOnly = true;
             }
         });
+        txtTitle.onclick = (e) => {
+            if (!txtTitle.readOnly) {
+                e.stopPropagation();
+            }
+        }
 
         let titleTable = util.div('table-container');
         let txtTitleContainer = util.div('cell full-width');
         txtTitleContainer.appendChild(txtTitle);
         titleTable.appendChild(txtTitleContainer);
-        if (tools) {
-            let btnToolsContainer = util.div('cell');
-            let btnTools = document.createElement('button');
-            btnTools.className = 'btn btn-default';
-            btnTools.onclick = (e) => {
-                e.stopPropagation();
-                tools.toggle();
-            }
-            let iconTools = document.createElement('span');
-            iconTools.className = 'icon icon-tools';
-            btnTools.appendChild(iconTools);
-            btnToolsContainer.appendChild(btnTools);
-            titleTable.appendChild(btnToolsContainer);
-        }
-
         let context = new Menu();
         context.append(new MenuItem({
             label: 'Rename',
@@ -275,7 +405,14 @@ class LayersControl {
                 txtTitle.readOnly = false;
             }
         }));
-
+        if (tools) {
+            context.append(new MenuItem({
+                label: "Edit",
+                click: () => {
+                    tools.toggle();
+                }
+            }));
+        }
         customMenuItems.map((menuItem) => {
             context.append(menuItem);
         });
@@ -283,23 +420,52 @@ class LayersControl {
             id: configuration._id,
             title: titleTable,
             details: tools,
-            active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && this.builder.map.hasLayer(layer)),
+            active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
             oncontextmenu: () => {
-                context.popup()
+                context.popup();
             },
             onclick: {
                 active: (item, e) => {
-                    if (configuration.baseLayer) {
-                        this.builder.map.removeLayer(this.baseLayer);
-                        this.baseLayer = layer;
+                    if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
+                        this.selectedRegions.push(configuration._id);
+                        layer.setStyle({
+                            fillOpacity: 0.8
+                        });
+                        gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
+                    } else if (configuration.type === 'marker') {
+                        this.selectedMarkers.push(configuration._id);
+                        gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
+                    } else {
+                        if (configuration.baseLayer) {
+                            where.removeLayer(this.baseLayer);
+                            this.baseLayer = layer;
+                        }
+                        where.addLayer(layer);
                     }
-                    this.builder.map.addLayer(layer);
+                    if (tools) {
+                        tools.hide();
+                    }
                 },
                 deactive: (item, e) => {
-                    if (!configuration.baseLayer) {
-                        this.builder.map.removeLayer(layer);
+                    if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
+
+                        this.selectedRegions.splice(this.selectedRegions.indexOf(configuration._id), 1);
+                        gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
+                        layer.setStyle({
+                            fillOpacity: configuration.options.fillOpacity || 0.3
+                        });
+                    } else if (configuration.type === 'marker') {
+                        this.selectedMarkers.splice(this.selectedMarkers.indexOf(configuration._id), 1);
+                        gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
                     } else {
-                        list.activeItem(item);
+                        if (!configuration.baseLayer) {
+                            where.removeLayer(layer);
+                        } else {
+                            list.activeItem(item);
+                        }
+                    }
+                    if (tools) {
+                        tools.hide();
                     }
                 }
             },
@@ -436,6 +602,111 @@ class LayersControl {
             first.appendChild(opacityCell);
         }
         return toolbox;
+    }
+
+
+    _removeRegion(configuration, layer) {
+        this.builder._drawnItems.removeLayer(layer);
+        let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
+        this.regionsWidget.removeItem(configuration._id);
+        delete this.builder._configuration.layers.drawnItems.layers[key];
+    }
+
+
+
+    _removeMarker(layer, configuration) {
+        this.builder._drawnItems.removeLayer(layer);
+        let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
+        this.markersWidget.removeItem(configuration._id);
+        delete this.builder._configuration.layers.drawnItems.layers[key];
+    }
+
+
+
+    _editMarkerDetails(marker, configuration) {
+        // OPEN A MODAL ASKING FOR DETAILS.
+        var modal = new Modal({
+            title: "Edit marker details",
+            height: "auto"
+        });
+        let grid = new Grid(2, 2);
+        let txtMarkerName = input.input({
+            type: "text",
+            id: `txtMarkerName_${configuration._id}_modal`,
+            value: configuration.name,
+            label: 'Marker name'
+        });
+        grid.addElement(txtMarkerName, 0, 1);
+        let taMarkerDetails = document.createElement("TEXTAREA");
+        taMarkerDetails.id = "tamarkerdetails";
+        taMarkerDetails.value = configuration.details;
+        taMarkerDetails.rows = 5
+        taMarkerDetails.style.width = '100%';
+        let lblMarkerDetails = document.createElement("LABEL");
+        lblMarkerDetails.htmlFor = "tamarkerdetails";
+        lblMarkerDetails.innerHTML = "Marker details: ";
+        grid.addElement(lblMarkerDetails, 1, 0);
+        grid.addElement(taMarkerDetails, 1, 1);
+        let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
+        buttonsContainer.addButton({
+            id: "CancelMarker00",
+            text: "Cancel",
+            action: () => {
+                modal.destroy();
+            },
+            className: "btn-default"
+        });
+        buttonsContainer.addButton({
+            id: "SaveMarker00",
+            text: "Save",
+            action: () => {
+
+                configuration.name = txtMarkerName.value;
+                configuration.details = taMarkerDetails.value;
+                marker.setTooltipContent(txtMarkerName.value);
+                marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
+                modal.destroy();
+            },
+            className: "btn-default"
+        });
+        let footer = util.div();
+        footer.appendChild(buttonsContainer.element);
+
+        modal.addBody(grid.element);
+        modal.addFooter(footer);
+        modal.show();
+    }
+
+    _deleteMarkerCheck(layer, configuration) {
+        dialog.showMessageBox({
+            title: 'Delete selected marker?',
+            type: 'warning',
+            buttons: ['No', 'Yes'],
+            message: `Delete the selected marker? (no undo available)`,
+            detail: `Marker to be deleted: ${configuration.name}.`,
+            noLink: true
+        }, (id) => {
+            if (id > 0) {
+                this._removeMarker(layer, configuration);
+            }
+        });
+    }
+
+    _deleteRegionsCheck(regions) {
+        dialog.showMessageBox({
+            title: 'Delete selected regions?',
+            type: 'warning',
+            buttons: ['No', "Yes"],
+            message: `Delete the selected regions? (no undo available)`,
+            detail: `Regions to be deleted: ${regions.map((c) => { return c.configuration.name })}`,
+            noLink: true
+        }, (id) => {
+            if (id > 0) {
+                regions.map((c) => {
+                    this._removeRegion(c.configuration, c.layer);
+                });
+            }
+        });
     }
 
 

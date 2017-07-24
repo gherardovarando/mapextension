@@ -264,68 +264,13 @@ function parseLayer(config) {
         }
         config.tileUrlTemplate = path.join(config.basePath, config.tileUrlTemplate); //join basepath and tileUrltemplate
 
-        config.maxZoom = Number(config.maxZoom) || 0;
-        config.minZoom = Number(config.minZoom) || 0;
-        config.maxNativeZoom = Number(config.maxNativeZoom) || 0;
-        config.minNativeZoom = Number(config.minNativeZoom) || 0;
-        config.errorTileUrl = config.errorTileUrl || '';
-        config.noWrap = config.noWrap || true;
-        config.zoomOffset = Number(config.zoomOffset) || 0;
-        config.zoomReverse = config.zoomReverse || false;
-        config.opacity = Math.min(1, Math.max(0, Number(config.opacity || 1)));
-        config.tileSize = config.tileSize || 256;
-        config.size = Math.max(1, Number(config.size || config.tileSize || 256));
-        config.sizeCal = config.sizeCal || config.size || 256;
-        config.depthCal = config.depthCal || 1;
-        config.unitCal = config.unitCal || 'u';
 
-        if (Array.isArray(config.tileSize)) {
-            config.bounds = config.bounds || [
-                [-Math.floor(Number(config.tileSize[1])), 0],
-                [0, Math.floor(Number(config.tileSize[0]))]
-            ];
-        } else if (typeof config.tileSize === 'number' || typeof config.tileSize === 'string') {
-            config.bounds = config.bounds || [
-                [-Math.floor(config.tileSize) || -256, 0],
-                [0, Math.floor(config.tileSize) || 256]
-            ];
-        } else { // it is an object
-            config.bounds = config.bounds || [
-                [-Math.floor(config.tileSize.x) || -256, 0],
-                [0, Math.floor(config.tileSize.y) || 256]
-            ]
-        }
     }
     if (config.type.includes('pointsLayer')) {
-        config.previewImageUrl = `${app.getAppPath()}${path.sep}images${path.sep}points.png`;
-        config.pointsUrlTemplate = config.pointsUrlTemplate || '';
-        config.excludeCF = config.excludeCF || false;
-        if (config.pointsUrlTemplate.startsWith("http:") ||
-            config.pointsUrlTemplate.startsWith("file:") ||
-            config.pointsUrlTemplate.startsWith("https:") ||
-            path.isAbsolute(config.pointsUrlTemplate)) {
-            config.basePath = '';
-        }
-        if (config.pointsUrlTemplate.startsWith(config.basePath)) {
-            config.basePath = '';
-        }
-        config.pointsUrlTemplate = config.basePath + config.pointsUrlTemplate;
 
     }
     if (config.type.includes('pixelsLayer')) {
-        config.pixelsUrlTemplate = config.pixelsUrlTemplate || '';
-        if (config.pixelsUrlTemplate.startsWith("http:") ||
-            config.pixelsUrlTemplate.startsWith("file:") ||
-            config.pixelsUrlTemplate.startsWith("https:") ||
-            path.isAbsolute(config.pixelsUrlTemplate)) {
-            config.basePath = '';
-        }
-        if (config.pixelsUrlTemplate.startsWith(config.basePath)) {
-            config.basePath = '';
-        }
-        config.norm = config.norm || 1;
-        config.role = config.role || 'area';
-        config.pixelsUrlTemplate = config.basePath + config.pixelsUrlTemplate;
+
     }
     if (config.type.includes('guideLayer')) {
         config.previewImageUrl = path.join(app.getAppPath(), 'images', 'grid.png');
@@ -348,11 +293,19 @@ function parseLayer(config) {
     }
     if (config.type.includes('drawnPolygons')) {
         config.type = 'featureGroup';
-        config.layers = config.polygons;
+        if (config.polygons) {
+            config.layers = config.polygons;
+        } else {
+            config.layers = {};
+        }
     }
     if (config.type.includes('polygons')) {
         config.type = 'featureGroup';
-        config.layers = config.polygons;
+        if (config.polygons) {
+            config.layers = config.polygons;
+        } else {
+            config.layers = {};
+        }
         Object.keys(config.layers).map((key) => {
             config.layers[key].type = config.layers[key].type || 'polygon';
         });

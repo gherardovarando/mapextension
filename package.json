@@ -1,35 +1,36 @@
 {
-    "name": "mapextension",
-    "version": "0.0.1",
-    "description": "map extension for electrongui",
-    "main": "MapExtension.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/gherardovarando/mapExtension.git"
-    },
-    "keywords": [
-        "map",
-        "leaflet",
-        "electrongui"
-    ],
-    "author": "Gherardo Varando <gherardo.varando@gmail.com>",
-    "license": "GPL-3.0",
-    "bugs": {
-        "url": "https://github.com/gherardovarando/mapExtension/issues"
-    },
-    "homepage": "https://github.com/gherardovarando/mapExtension#readme",
-    "dependencies": {
-        "babyparse": "^0.4.6",
-        "leaflet": "^1.0.3",
-        "leaflet-draw": "^0.4.9",
-        "leaflet-geometryutil": "^0.8.0",
-        "leaflet-snap": "0.0.4",
-        "leaflet.markercluster": "^1.0.4",
-        "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
-        "electrongui": "github:gherardovarando/electrongui",
-        "tiff-to-png": ""
-    }
+  "name": "mapextension",
+  "version": "0.0.1",
+  "description": "map extension for electrongui",
+  "main": "MapExtension.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gherardovarando/mapextension.git"
+  },
+  "keywords": [
+    "map",
+    "leaflet",
+    "electrongui"
+  ],
+  "author": "Gherardo Varando <gherardo.varando@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gherardovarando/mapextension/issues"
+  },
+  "homepage": "https://github.com/gherardovarando/mapextension#readme",
+  "dependencies": {
+    "babyparse": "^0.4.6",
+    "electrongui": "github:gherardovarando/electrongui",
+    "jsoneditor": "^5.9.3",
+    "leaflet": "^1.0.3",
+    "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
+    "leaflet-draw": "^0.4.9",
+    "leaflet-geometryutil": "^0.8.0",
+    "leaflet-snap": "0.0.4",
+    "leaflet.markercluster": "^1.0.4",
+    "tiff-to-png": ""
+  }
 }

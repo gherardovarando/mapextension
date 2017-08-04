@@ -22,15 +22,17 @@
   },
   "homepage": "https://github.com/gherardovarando/mapextension#readme",
   "dependencies": {
-    "babyparse": "^0.4.6",
     "electrongui": "github:gherardovarando/electrongui",
     "jsoneditor": "^5.9.3",
     "leaflet": "^1.0.3",
     "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
+    "leaflet-multislice": "github:gherardovarando/leaflet-multislice",
+    "leaflet-map-builder": "github:gherardovarando/leaflet-map-builder",
     "leaflet-draw": "^0.4.9",
     "leaflet-geometryutil": "^0.8.0",
     "leaflet-snap": "0.0.4",
     "leaflet.markercluster": "^1.0.4",
+    "papaparse": "^4.3.3",
     "tiff-to-png": ""
   }
 }

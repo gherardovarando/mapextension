@@ -47,9 +47,11 @@ const LayersControl = require('./src/LayersControl.js');
 const JSONEditor = require('jsoneditor');
 const leaflet = require('leaflet');
 const leafletMarkerCluster = require('leaflet.markercluster');
+window.Papa = require('papaparse'); //we have to define Papa as a global object
 const leafletcsvtiles = require('leaflet-csvtiles');
 const geometryutil = require('leaflet-geometryutil');
 const leafletDraw = require('leaflet-draw');
+require('leaflet-multislice');
 const snap = require(`leaflet-snap`);
 const mapBuilder = require('leaflet-map-builder');
 const isDev = require('electron-is-dev');
@@ -173,6 +175,10 @@ class MapExtension extends GuiExtension {
       zoomControl: false,
       tooltip: true,
       popup: true,
+      multislice: true,
+      sliceControl: true,
+      zoomSnap: 1,
+      zoomDelta: 1,
       expert: isDev
     }
     this.maps = {};
@@ -210,11 +216,12 @@ class MapExtension extends GuiExtension {
 
     let options = {
       map: {
-        minZoom: 0,
-        zoomSnap: 1,
-        zoomDelta: 1,
+        zoomSnap: this._settings.zoomSnap,
+        zoomDelta: this._settings.zoomDelta,
         crs: CRSs[this._settings.crs],
-        zoomControl: false
+        zoomControl: false,
+        multislice: this._settings.multislice,
+        sliceControl: this._settings.sliceControl
       },
       builder: {
         dev: true,
@@ -263,14 +270,12 @@ class MapExtension extends GuiExtension {
         tooltip: {
           polygon: this._settings.tooltip,
           rectangle: this._settings.tooltip,
-          marker: this._settings.tooltip,
-          csvTiles: this._settings.tooltip
+          marker: this._settings.tooltip
         },
         popup: {
           marker: this._settings.popup,
           polygon: this._settings.popup,
-          rectangle: this._settings.popup,
-          csvTiles: this._settings.popup
+          rectangle: this._settings.popup
         }
       }
     }
@@ -423,8 +428,6 @@ class MapExtension extends GuiExtension {
     //this.regionAnalyzer = new RegionAnalyzer();
 
 
-    gui.workspace.addSpace(this, this.maps, false); //without overwriting
-    //saving to workspace and retriving loaded worspace
     if (gui.workspace instanceof Workspace) {
       gui.workspace.addSpace(this, this.maps);
       gui.workspace.on('load', () => {
@@ -480,8 +483,14 @@ class MapExtension extends GuiExtension {
           this.activate();
           this.show();
         }
+      },
+      oncancel: () => {
+        if (needExtRel) {
+          this.deactivate();
+          this.activate();
+          this.show();
+        }
       }
-
     });
     let body = document.createElement('DIV');
     body.className = 'cellconteiner';
@@ -567,6 +576,20 @@ class MapExtension extends GuiExtension {
       },
       ondeactivate: () => {
         this._settings.zoomControl = false;
+        needExtRel = true;
+      }
+    });
+    input.checkButton({
+      parent: cmap,
+      className: 'cell',
+      active: this._settings.multislice,
+      text: "Multi slice",
+      onactivate: () => {
+        this._settings.multislice = true;
+        needExtRel = true;
+      },
+      ondeactivate: () => {
+        this._settings.multislice = false;
         needExtRel = true;
       }
     });
@@ -1079,6 +1102,13 @@ class MapExtension extends GuiExtension {
         }
         this.mapBuilder._configuration.layers.drawnItems.layers[layer._id] = config;
       });
+    });
+  }
+
+
+  loadMap(path) {
+    mapio.loadMap(path, (conf) => {
+      this.addNewMap(conf);
     });
   }
 

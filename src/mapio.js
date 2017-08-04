@@ -212,14 +212,8 @@ function parseMap(configuration) {
       } else {
         // otherwise we assume lay is a configuration object
         let c = alls[a][lay];
-        c.basePath = c.basePath || configuration.basePath;
         c.name = c.name || `${c.type}_${indx++}`;
-        c._key = `${lay}`;
-        if (c.type == 'pointsLayer' || c.type == 'pixelsLayer') {
-          configuration.data[lay] = parseLayer(c);
-        } else {
-          configuration.layers[lay] = parseLayer(c);
-        }
+        configuration.layers[lay] = parseLayer(c);
       }
     }
   }
@@ -240,7 +234,7 @@ function parseMap(configuration) {
 
 
 function parseLayer(config) {
-  if (config.type.includes('tilesLayer') || config.type.includes('tileLayer')) {
+  if (config.type == 'tilesLayer' || config.type == 'tileLayer') {
     config.type = 'tileLayer';
     config.tileUrlTemplate = config.tileUrlTemplate || config.tilesUrlTemplate || '';
   }

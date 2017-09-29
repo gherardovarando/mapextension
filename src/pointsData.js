@@ -22,7 +22,7 @@
 //use non-map convention x-y if v=coords x=v[0] y=v[1]
 //
 const http = require('http');
-const Baby = require("babyparse");
+//const Baby = require("babyparse");
 const fs = require("fs");
 
 class pointsData {

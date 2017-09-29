@@ -54,9 +54,21 @@
      this.content = util.div('content');
      this.tabs = new TabGroup(this.content);
      this.baselist = new ListGroup(this.content);
+     this.baselist.addSearch({
+       hide:true,
+       toggle: true
+     });
      this.tileslist = new ListGroup(this.content);
+     this.tileslist.addSearch({
+       hide:true,
+       toggle: true
+     });
      this.tileslist.element.classList.add('tiles-list');
      this.overlaylist = new ListGroup(this.content);
+     this.overlaylist.addSearch({
+      hide:true,
+      toggle: true
+     });
      this.datalist = new ListGroup(this.content);
      this.overlaylist.hide();
      this.datalist.hide();
@@ -135,7 +147,7 @@
        this.regionsWidget.clean();
        this.markersWidget.clean();
        this.selectedRegions = [];
-       gui.viewTrick();
+       //gui.viewTrick();
      });
 
 
@@ -296,7 +308,7 @@
          break;
        case 'polygon':
          list = this.regionsWidget;
-         this.builder._drawnItems.addLayer(layer);
+         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
@@ -315,16 +327,21 @@
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             this._deleteRegionsCheck([{
-               configuration: configuration,
-               layer: layer
-             }]);
+             if (this.selectedRegions.length > 0) {
+               this._deleteRegionsCheck(this.selectedRegions);
+               this.selectedRegions = [];
+             } else {
+               this._deleteRegionsCheck([{
+                 configuration: configuration,
+                 layer: layer
+               }]);
+             }
            }
          }));
          break;
        case 'rectangle':
          list = this.regionsWidget;
-         this.builder._drawnItems.addLayer(layer);
+         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
@@ -343,16 +360,21 @@
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             this._deleteRegionsCheck([{
-               configuration: configuration,
-               layer: layer
-             }]);
+             if (this.selectedRegions.length > 0) {
+               this._deleteRegionsCheck(this.selectedRegions);
+               this.selectedRegions = [];
+             } else {
+               this._deleteRegionsCheck([{
+                 configuration: configuration,
+                 layer: layer
+               }]);
+             }
            }
          }));
          break;
        case 'circle':
          list = this.regionsWidget;
-         this.builder._drawnItems.addLayer(layer);
+         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
@@ -371,10 +393,14 @@
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             this._deleteRegionsCheck([{
-               configuration: configuration,
-               layer: layer
-             }]);
+             if (this.selectedRegions.length > 0) {
+               this._deleteRegionsCheck(this.selectedRegions);
+             } else {
+               this._deleteRegionsCheck([{
+                 configuration: configuration,
+                 layer: layer
+               }]);
+             }
            }
          }));
          break;
@@ -383,11 +409,11 @@
          break;
        case 'marker':
          list = this.markersWidget;
-         this.builder._drawnItems.addLayer(layer);
+         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             this._deleteMarkerCheck(layer, configuration);
+             this._deleteMarkerCheck(this.selectedMarkers);
            }
          }));
          customMenuItems.push(new MenuItem({
@@ -404,10 +430,16 @@
      this._addToList(layer, configuration, where, customMenuItems, tools, list);
      if (typeof layer.on === 'function') {
        layer.on('remove', (e) => {
+         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
+           return;
+         }
          list.deactiveItem(`${e.target._id}`);
        });
 
        layer.on('add', (e) => {
+         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
+           return;
+         }
          list.activeItem(`${e.target._id}`);
        });
      }
@@ -445,15 +477,22 @@
        }
      }
 
-     let titleTable = util.div('table-container');
-     let txtTitleContainer = util.div('cell full-width');
-     txtTitleContainer.appendChild(txtTitle);
-     titleTable.appendChild(txtTitleContainer);
+     //  let titleTable = util.div('table-container');
+     //  let txtTitleContainer = util.div('cell full-width');
+     //  txtTitleContainer.appendChild(txtTitle);
+     //  titleTable.appendChild(txtTitleContainer);
      let context = new Menu();
+     context.append(new MenuItem({
+       label: 'Search',
+       click: ()=>{
+         list.search.toggle();
+       }
+     }));
      context.append(new MenuItem({
        label: 'Rename',
        click: () => {
-         txtTitle.readOnly = false;
+         this._rename(layer, configuration, list);
+         //txtTitle.readOnly = false;
        }
      }));
      if (tools) {
@@ -469,7 +508,7 @@
      });
      list.addItem({
        id: configuration._id,
-       title: titleTable,
+       title: txtTitle,
        details: tools,
        active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
        oncontextmenu: () => {
@@ -478,13 +517,21 @@
        onclick: {
          active: (item, e) => {
            if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
-             this.selectedRegions.push(configuration._id);
+             this.selectedRegions.push({
+               configuration: configuration,
+               layer: layer,
+               where: where
+             });
              layer.setStyle({
                fillOpacity: 0.8
              });
              gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker') {
-             this.selectedMarkers.push(configuration._id);
+             this.selectedMarkers.push({
+               configuration: configuration,
+               layer: layer,
+               where: where
+             });
              gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (configuration.baseLayer) {
@@ -499,14 +546,21 @@
          },
          deactive: (item, e) => {
            if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
-
-             this.selectedRegions.splice(this.selectedRegions.indexOf(configuration._id), 1);
+             this.selectedRegions.splice(this.selectedRegions.indexOf({
+               configuration: configuration,
+               layer: layer,
+               where: where
+             }), 1);
              gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
              layer.setStyle({
                fillOpacity: configuration.options.fillOpacity || 0.3
              });
            } else if (configuration.type === 'marker') {
-             this.selectedMarkers.splice(this.selectedMarkers.indexOf(configuration._id), 1);
+             this.selectedMarkers.splice(this.selectedMarkers.indexOf({
+               configuration: configuration,
+               layer: layer,
+               where: where
+             }), 1);
              gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (!configuration.baseLayer) {
@@ -521,7 +575,7 @@
          }
        },
        toggle: true,
-       key: configuration.name
+       key: configuration.name + configuration.type
      });
 
    }
@@ -641,8 +695,10 @@
          oninput: (inp) => {
            if (layer.setOpacity) {
              layer.setOpacity(inp.value);
+             configuration.options.opacity = inp.value;
            }
            if (layer.setStyle) {
+             configuration.options.opacity = inp.value;
              layer.setStyle({
                opacity: inp.value,
                fillOpacity: inp.value / 3
@@ -656,29 +712,76 @@
    }
 
 
-   _removeRegion(configuration, layer) {
-     this.builder._drawnItems.removeLayer(layer);
-     let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-     this.regionsWidget.removeItem(configuration._id);
-     delete this.builder._configuration.layers.drawnItems.layers[key];
+   _removeRegion(configuration, layer, where) {
+     if (where === this.builder._drawnItems) {
+       this.builder._drawnItems.removeLayer(layer);
+       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
+       this.regionsWidget.removeItem(configuration._id);
+       delete this.builder._configuration.layers.drawnItems.layers[key];
+       this.selectedRegions.splice(this.selectedRegions.indexOf({
+         configuration: configuration,
+         layer: layer,
+         where: where
+       }), 1);
+     }
    }
 
 
 
-   _removeMarker(layer, configuration) {
-     this.builder._drawnItems.removeLayer(layer);
-     let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-     this.markersWidget.removeItem(configuration._id);
-     delete this.builder._configuration.layers.drawnItems.layers[key];
+   _removeMarker(configuration, layer, where) {
+     if (where === this.builder._drawnItems) {
+       this.builder._drawnItems.removeLayer(layer);
+       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
+       this.markersWidget.removeItem(configuration._id);
+       delete this.builder._configuration.layers.drawnItems.layers[key];
+       this.selectedMarkers.splice(this.selectedMarkers.indexOf({
+         configuration: configuration,
+         layer: layer,
+         where: where
+       }), 1);
+     }
    }
 
-
+   _rename(layer, configuration, list) {
+     let txtLayerName = input.input({
+       type: "text",
+       id: `txtLayerName_${configuration._id}_modal`,
+       value: configuration.name,
+       label: ''
+     });
+     let modal = new Modal({
+       title: `rename ${configuration.type}`,
+       height: 'auto',
+       body: txtLayerName,
+       onsubmit: () => {
+         configuration.name = txtLayerName.value;
+         list.setTitle(configuration._id, configuration.name);
+         layer.setTooltipContent(txtLayerName.value);
+         layer.setPopupContent(`<strong>${txtLayerName.value}</strong> <p> ${configuration.details}</p>`);
+       }
+     });
+     modal.show();
+   }
 
    _editMarkerDetails(marker, configuration) {
      // OPEN A MODAL ASKING FOR DETAILS.
      var modal = new Modal({
        title: "Edit marker details",
-       height: "auto"
+       height: "auto",
+       onsubmit: () => {
+         configuration.name = txtMarkerName.value;
+         configuration.details = taMarkerDetails.value;
+         this.markersWidget.setTitle(configuration._id, configuration.name);
+         marker.setTooltipContent(txtMarkerName.value);
+         marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
+       },
+       oncancel: () => {
+         configuration.name = txtMarkerName.value;
+         configuration.details = taMarkerDetails.value;
+         this.markersWidget.setTitle(configuration._id, configuration.name);
+         marker.setTooltipContent(txtMarkerName.value);
+         marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
+       }
      });
      let grid = new Grid(2, 2);
      let txtMarkerName = input.input({
@@ -698,47 +801,23 @@
      lblMarkerDetails.innerHTML = "Marker details: ";
      grid.addElement(lblMarkerDetails, 1, 0);
      grid.addElement(taMarkerDetails, 1, 1);
-     let buttonsContainer = new ButtonsContainer(document.createElement("DIV"));
-     buttonsContainer.addButton({
-       id: "CancelMarker00",
-       text: "Cancel",
-       action: () => {
-         modal.destroy();
-       },
-       className: "btn-default"
-     });
-     buttonsContainer.addButton({
-       id: "SaveMarker00",
-       text: "Save",
-       action: () => {
-
-         configuration.name = txtMarkerName.value;
-         configuration.details = taMarkerDetails.value;
-         marker.setTooltipContent(txtMarkerName.value);
-         marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
-         modal.destroy();
-       },
-       className: "btn-default"
-     });
-     let footer = util.div();
-     footer.appendChild(buttonsContainer.element);
-
      modal.addBody(grid.element);
-     modal.addFooter(footer);
      modal.show();
    }
 
-   _deleteMarkerCheck(layer, configuration) {
+   _deleteMarkerCheck(markers) {
      dialog.showMessageBox({
        title: 'Delete selected marker?',
        type: 'warning',
        buttons: ['No', 'Yes'],
        message: `Delete the selected marker? (no undo available)`,
-       detail: `Marker to be deleted: ${configuration.name}.`,
+       detail: `Marker to be deleted: ${markers.map((c) => { return c.configuration.name })}.`,
        noLink: true
      }, (id) => {
        if (id > 0) {
-         this._removeMarker(layer, configuration);
+         markers.map((c) => {
+           this._removeMarker(c.configuration, c.layer, c.where);
+         });
        }
      });
    }
@@ -754,7 +833,7 @@
      }, (id) => {
        if (id > 0) {
          regions.map((c) => {
-           this._removeRegion(c.configuration, c.layer);
+           this._removeRegion(c.configuration, c.layer, c.where);
          });
        }
      });

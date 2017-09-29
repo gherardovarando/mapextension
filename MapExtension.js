@@ -51,7 +51,7 @@ window.Papa = require('papaparse'); //we have to define Papa as a global object
 const leafletcsvtiles = require('leaflet-csvtiles');
 const geometryutil = require('leaflet-geometryutil');
 const leafletDraw = require('leaflet-draw');
-require('leaflet-multislice');
+require('leaflet-multilevel');
 const snap = require(`leaflet-snap`);
 const mapBuilder = require('leaflet-map-builder');
 const isDev = require('electron-is-dev');
@@ -76,9 +76,15 @@ const layerTypes = ['tileLayer', 'tileLayerWMS', 'imageOverlay', 'guideLayer', '
 const drawObjects = ['marker', 'polygon', 'rectangle', 'polyline', 'circle'];
 
 
-
+/**
+Map extension
+ */
 class MapExtension extends GuiExtension {
 
+  /**
+   * Creates an instance of the extension.
+   * A menu with all capabilities is defined.
+   */
   constructor() {
     super({
       icon: icon,
@@ -152,6 +158,15 @@ class MapExtension extends GuiExtension {
             this._modaltilelayer();
           }
         }, {
+          label: 'CsvTiles ',
+          click: () => {
+            if (!this._isLoaded) {
+              gui.notify('First load or create a map');
+              return;
+            }
+            this._modalcsvlayer();
+          }
+        }, {
           label: 'Guide',
           click: () => {
             if (!this._isLoaded) {
@@ -175,8 +190,8 @@ class MapExtension extends GuiExtension {
       zoomControl: false,
       tooltip: true,
       popup: true,
-      multislice: true,
-      sliceControl: true,
+      multilevel: true,
+      levelControl: true,
       zoomSnap: 1,
       zoomDelta: 1,
       expert: isDev
@@ -186,11 +201,17 @@ class MapExtension extends GuiExtension {
     this._indx = 0;
   }
 
+  /**
+   * Redefine the show method so to apply the viewTrick, sometimes the leaflet map get stucked and we need to resize the window (probably to force the computation of the styles and html elements).
+   */
   show() {
     super.show();
     gui.viewTrick();
   }
 
+  /**
+   * Activates the extension.
+   */
   activate() {
     this.appendMenu();
     this.addToggleButton({
@@ -220,8 +241,8 @@ class MapExtension extends GuiExtension {
         zoomDelta: this._settings.zoomDelta,
         crs: CRSs[this._settings.crs],
         zoomControl: false,
-        multislice: this._settings.multislice,
-        sliceControl: this._settings.sliceControl
+        multilevel: this._settings.multilevel,
+        levelControl: this._settings.levelControl
       },
       builder: {
         dev: true,
@@ -427,7 +448,9 @@ class MapExtension extends GuiExtension {
 
     //this.regionAnalyzer = new RegionAnalyzer();
 
-
+    /**
+     * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
+     */
     if (gui.workspace instanceof Workspace) {
       gui.workspace.addSpace(this, this.maps);
       gui.workspace.on('load', () => {
@@ -444,6 +467,7 @@ class MapExtension extends GuiExtension {
         gui.workspace.addSpace(this, this.maps, true); //overwriting
         gui.notify(`${tot} maps from workspace loaded`);
       });
+
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of mapPage
       if (gui.workspace.spaces.MapExtension) {
         this.mapBuilder.clear();
@@ -461,13 +485,18 @@ class MapExtension extends GuiExtension {
 
   } //end activate
 
-
+  /**
+   * deactivate the extension
+   */
   deactivate() { /// the extension has to take care of removing all the buttons and element appended outside of the main extension pane
     this.mapBuilder.map.off(); //unbind all events
     this.removeToggleButton(this.constructor.name); //this is compulsory to leave the interface clean
     super.deactivate(); //we will also call the super class deactivate method
   }
 
+  /**
+   * Show a modal with the setting relatives to the extension
+   */
   _setSettings() {
     let newSet = util.clone(this._settings);
     let needExtRel = false;
@@ -495,7 +524,6 @@ class MapExtension extends GuiExtension {
     let body = document.createElement('DIV');
     body.className = 'cellconteiner';
 
-
     let Kinterface = util.div('cell');
     Kinterface.style.width = '45%';
     body.appendChild(Kinterface);
@@ -513,7 +541,6 @@ class MapExtension extends GuiExtension {
     Kmap.appendChild(tmap);
     let cmap = util.div('cellconteiner');
     Kmap.appendChild(cmap);
-
 
     input.checkButton({
       parent: cinterface,
@@ -582,14 +609,14 @@ class MapExtension extends GuiExtension {
     input.checkButton({
       parent: cmap,
       className: 'cell',
-      active: this._settings.multislice,
-      text: "Multi slice",
+      active: this._settings.multilevel,
+      text: "Multi level",
       onactivate: () => {
-        this._settings.multislice = true;
+        this._settings.multilevel = true;
         needExtRel = true;
       },
       ondeactivate: () => {
-        this._settings.multislice = false;
+        this._settings.multilevel = false;
         needExtRel = true;
       }
     });
@@ -627,20 +654,23 @@ class MapExtension extends GuiExtension {
   }
 
 
-  //
+  /**
+   * Add a new map to the current workspace and map list
+   * @param {[type]} configuration map configuration object
+   */
   addNewMap(configuration) {
     configuration._id = this._indx++;
-    try {
+    try { //try to set the mapBuilder to the configuration
       this.mapBuilder.setConfiguration(configuration);
     } catch (e) {
       // otherwise means that the builder is unable to load the map
-      console.log(e);
+      gui.notify(e);
       return;
     }
     let body = new ToggleElement(document.createElement('DIV'));
 
     let ic;
-    switch (configuration.source) {
+    switch (configuration.source) { //choose the appropriate icon base on the source field
       case 'remote':
         ic = 'icon icon-network';
         break;
@@ -654,7 +684,7 @@ class MapExtension extends GuiExtension {
         ic = '';
     };
 
-    let ctn = new Menu();
+    let ctn = new Menu(); //build the contextual menu
     ctn.append(new MenuItem({
       label: 'Export map',
       type: 'normal',
@@ -727,32 +757,38 @@ class MapExtension extends GuiExtension {
     this.show();
   }
 
-
-
-
-
-
+  /**
+   * Export the regions selected (TO DO)
+   *  @param  {Array} regions
+   */
   exportsRegions(regions) {
     dialog.showSaveDialog({
       title: 'Export regions statistics',
       type: 'normal',
       filters: [{
-        name: 'CSV',
-        extensions: ['csv']
-      }]
+          name: 'CSV',
+          extensions: ['csv']
+        },
+        {
+          name: 'JSON',
+          extensions: ['json']
+        }
+      ]
     }, (filename) => {
-      let fields = ['name'];
-      let cont = json2csv({
-        data: regions.map((reg) => {
-
-        }),
-        fields: fields
-      });
-      fs.writeFile(filename, cont);
+      // let fields = ['name'];
+      // let cont = json2csv({
+      //   data: regions.map((reg) => {
+      //
+      //   }),
+      //   fields: fields
+      // });
+      // fs.writeFile(filename, cont);
     });
   }
 
-
+  /**
+   * Create new empty map, it shows a modal to select the name
+   */
   createMap() {
     let body = util.div();
     let name = input.input({
@@ -769,7 +805,7 @@ class MapExtension extends GuiExtension {
     });
     let modal = new Modal({
       title: 'choose a name for the new map',
-      width: '600px',
+      width: 'auto',
       height: 'auto',
       noCloseIcon: true,
       parent: this,
@@ -786,7 +822,10 @@ class MapExtension extends GuiExtension {
 
   }
 
-
+  /**
+   * Shows a dialog to open a file and add the selected layer to the current map
+   * @param  {FileFilter[]} filters  optional filters for the accepted extensions
+   */
   openLayerFile(filters) {
     if (Object.keys(this.maps).length <= 0) return;
     dialog.showOpenDialog({
@@ -821,13 +860,18 @@ class MapExtension extends GuiExtension {
     });
   }
 
+  /**
+   * Add the layer defined by the file in the given path to the present active map
+   * @param {string} path    [description]
+   * @param {object} options [description]
+   */
   addLayerFile(path, options) {
     options = options || {};
     if (path.endsWith('.json')) {
       let conf = util.readJSONsync(path);
       if (!conf) return;
       conf.basePath = mapio.basePath(conf, path);
-      conf = mapio.parseLayer(conf);
+      conf = mapio.parseLayer(conf, path);
       this.addLayer(conf);
     } else if (path.endsWith('.jpg') || path.endsWith('.JPG') || path.endsWith('.png') || path.endsWith('.gif')) {
       var dim = sizeOf(path);
@@ -896,7 +940,11 @@ class MapExtension extends GuiExtension {
     }
   }
 
-  //add the given laye to the current map
+
+  /**
+   * add the given layer to the current map
+   * @param {Object} conf configuration object of the layer to add
+   */
   addLayer(conf) {
     conf = mapio.parseLayer(conf);
     this.mapBuilder.loadLayer(conf);
@@ -904,7 +952,10 @@ class MapExtension extends GuiExtension {
   }
 
 
-  _modaltilelayer() {
+  /**
+   * Shows a modal to add a new csvTile layer
+   */
+  _modalcsvlayer() {
     let body = util.div('cellconteiner');
     let name = input.input({
       id: 'namenewlayer',
@@ -929,7 +980,25 @@ class MapExtension extends GuiExtension {
       type: 'text',
       label: '',
       className: 'cell',
+      placeholder: 'tile size',
+      parent: body,
+      value: ''
+    });
+    let size = input.input({
+      id: 'sizenewlayer',
+      type: 'text',
+      label: '',
+      className: 'cell',
       placeholder: 'size',
+      parent: body,
+      value: ''
+    });
+    let bounds = input.input({
+      id: 'boundsnewlayer',
+      type: 'text',
+      label: '',
+      className: 'cell',
+      placeholder: 'bounds [[lat,lng],[lat,lng]]',
       parent: body,
       value: ''
     });
@@ -966,6 +1035,94 @@ class MapExtension extends GuiExtension {
       }
     });
     (new Modal({
+      title: 'Add a csvTiles',
+      body: body,
+      width: '200px',
+      onsubmit: () => {
+        this.addLayer({
+          name: name.value,
+          type: 'csvTiles',
+          urlTemplate: url.value,
+          options: {
+            tileSize: JSON.parse(tileSize.value || 256) || 256,
+            size: JSON.parse(size.value || 256) || 256,
+            bounds: JSON.parse(size.bounds || "[[-256,0],[0,256]]"),
+            minZoom: minz.value,
+            maxZoom: maxz.value
+          }
+        });
+      }
+    })).show();
+  }
+
+
+  /**
+   * Shows a modal to add a new TileLayer
+   */
+  _modaltilelayer() {
+    let body = util.div('cellconteiner');
+    let name = input.input({
+      id: 'namenewlayer',
+      type: 'text',
+      label: '',
+      className: 'cell',
+      placeholder: 'name',
+      parent: body,
+      value: ''
+    });
+    let url = input.input({
+      id: 'urlnewlayer',
+      type: 'text',
+      label: '',
+      className: 'cell',
+      placeholder: 'tiles url template',
+      parent: body,
+      value: ''
+    });
+    let tileSize = input.input({
+      id: 'tilesizenewlayer',
+      type: 'text',
+      label: '',
+      className: 'cell',
+      placeholder: 'tileSize',
+      parent: body,
+      value: ''
+    });
+    let minz = input.input({
+      id: 'minzoomnewlayer',
+      type: 'number',
+      label: '',
+      className: 'cell',
+      placeholder: 'minZoom',
+      parent: body,
+      value: 0
+    });
+    let maxz = input.input({
+      id: 'maxzoomnewlayer',
+      type: 'number',
+      label: '',
+      className: 'cell',
+      placeholder: 'maxZoom',
+      parent: body,
+      value: 10
+    });
+    let base = true;
+    input.checkButton({
+      id: 'basenewlayer',
+      parent: body,
+      text: 'base layer',
+      className: 'cell',
+      active: true,
+      ondeactivate: (btn) => {
+        base = false;
+        btn.innerHTML = 'overlay';
+      },
+      onactivate: (btn) => {
+        base = true;
+        btn.innerHTML = 'base layer';
+      }
+    });
+    (new Modal({
       title: 'Add a tileLayer',
       body: body,
       width: '200px',
@@ -974,18 +1131,22 @@ class MapExtension extends GuiExtension {
           name: name.value,
           type: 'tileLayer',
           tilesUrlTemplate: url.value,
-          tileSize: JSON.parse(tileSize.value || 256) || 256,
-          minNativeZoom: minz.value,
-          maxNativeZoom: maxz.value,
-          minZoom: minz.value,
-          maxZoom: maxz.value,
-          baseLayer: base
+          baseLayer: base,
+          options: {
+            tileSize: JSON.parse(tileSize.value || 256) || 256,
+            minNativeZoom: minz.value,
+            maxNativeZoom: maxz.value,
+            minZoom: minz.value,
+            maxZoom: maxz.value
+          }
         });
       }
     })).show();
   }
 
-
+  /**
+   * Show a modal to add a new guide layer
+   */
   _modalGuideLayer() {
     let body = util.div('cellconteiner');
     let name = input.input({
@@ -1031,7 +1192,9 @@ class MapExtension extends GuiExtension {
     })).show();
   }
 
-
+  /**
+   * Register the events related to leaflet draw
+   */
   _drawEvents() {
     this.mapBuilder.map.on(L.Draw.Event.CREATED, (e) => {
       let type = e.layerType,
@@ -1072,6 +1235,7 @@ class MapExtension extends GuiExtension {
       });
     });
 
+    //whne items are edited
     this.mapBuilder.map.on(L.Draw.Event.EDITED, (e) => {
       let layers = e.layers;
       layers.eachLayer((layer) => {
@@ -1100,12 +1264,16 @@ class MapExtension extends GuiExtension {
         if (layer.getRadius) {
           config.radius = layer.getRadius();
         }
+        //we have to change the configuration object, the layer in the map is already modified
         this.mapBuilder._configuration.layers.drawnItems.layers[layer._id] = config;
       });
     });
   }
 
-
+  /**
+   * Load a map to the present workspace
+   * @param  {String} path path of the configuration file of the map
+   */
   loadMap(path) {
     mapio.loadMap(path, (conf) => {
       this.addNewMap(conf);

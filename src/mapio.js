@@ -151,7 +151,7 @@ function findConfigurationSync(dir, name) {
       }
     }
   }
-  if (options.length == 1) {
+  if (options.length >= 1) {
     return util.readJSONsync(dir + options[0]);
   } else {
     return {};
@@ -233,16 +233,17 @@ function parseMap(configuration) {
 }
 
 
-function parseLayer(config) {
+function parseLayer(config, basePath) {
   if (config.type == 'tilesLayer' || config.type == 'tileLayer') {
     config.type = 'tileLayer';
     config.tileUrlTemplate = config.tileUrlTemplate || config.tilesUrlTemplate || '';
+    //config.tileUrlTemplate = basePath + config.tileUrlTemplate;
   }
   if (config.type.includes('pointsLayer')) {
 
   }
   if (config.type.includes('csvTiles')) {
-
+    config.url = basePath + config.url;
   }
   if (config.type.includes('pixelsLayer')) {
 
@@ -254,7 +255,7 @@ function parseLayer(config) {
 
   }
   if (config.type.includes('imageLayer')) {
-
+    //config.url = basePath + config.url;
   }
   if (config.type.includes('drawnPolygons')) {
     config.type = 'featureGroup';

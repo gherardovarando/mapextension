@@ -26,13 +26,13 @@
     "jsoneditor": "^5.9.3",
     "leaflet": "^1.2.0",
     "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
-    "leaflet-multilevel": "github:gherardovarando/leaflet-multilevel",
-    "leaflet-map-builder": "github:gherardovarando/leaflet-map-builder",
     "leaflet-draw": "^0.4.9",
     "leaflet-geometryutil": "^0.8.0",
+    "leaflet-map-builder": "github:gherardovarando/leaflet-map-builder",
+    "leaflet-multilevel": "github:gherardovarando/leaflet-multilevel",
     "leaflet-snap": "0.0.4",
     "leaflet.markercluster": "^1.0.4",
     "papaparse": "^4.3.3",
-    "tiff-to-png": ""
+    "tiff-to-png": "^1.0.5"
   }
 }

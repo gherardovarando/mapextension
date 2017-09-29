@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+
+  <title>map name here</title>
+
+  <link rel="stylesheet" href="style/leaflet.css" />
+
+
+</head>
+
+<body>
+
+  <div id="map" style="height:600px; width: 800px;"></div>
+
+</body>
+
+
+<script>
+
+const MapExtension = 
+
+  var map = L.map('map', {
+    crs: L.CRS.Simple,
+    zoomControl: false,
+    multislice: false, //change if it's not a multislice
+    sliceControl: {
+      position: 'bottomleft'
+    }
+  });
+
+  var builder = L.mapBuilder(map);
+
+
+  map.fitWorld();
+</script>
+
+
+</html>

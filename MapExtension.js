@@ -109,6 +109,8 @@ class MapExtension extends GuiExtension {
         click: () => {
           if (this.mapBuilder instanceof L.MapBuilder) {
             this.mapBuilder.reload();
+            console.log(`${__dirname}/src/mapview.html`);
+            gui.openChildWindow(`file://${__dirname}/src/mapview.html`);
           }
         }
       }, {
@@ -246,6 +248,10 @@ class MapExtension extends GuiExtension {
       },
       builder: {
         dev: true,
+        loading: (i, tot) => {
+          util.setProgress((i+1) / tot);
+          gui.setProgress(100*(i+1)/tot);
+        },
         controls: {
           draw: {
             position: 'bottomleft',
@@ -286,6 +292,7 @@ class MapExtension extends GuiExtension {
           zoom: zc,
           layers: (layer, configuration, where) => {
             this.layersControl.addLayer(layer, configuration, where);
+            gui.viewTrick();
           }
         },
         tooltip: {
@@ -949,6 +956,7 @@ class MapExtension extends GuiExtension {
     conf = mapio.parseLayer(conf);
     this.mapBuilder.loadLayer(conf);
     this.activeConfiguration.layers[`layer_${conf._id}`] = conf;
+    console.log(conf);
   }
 
 

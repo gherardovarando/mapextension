@@ -136,6 +136,7 @@
        this.overlaylist.clean();
        this.datalist.clean();
        this.baseLayer = null;
+       gui.viewTrick();
      });
 
      this.builder.on('error', (e) => {
@@ -147,7 +148,7 @@
        this.regionsWidget.clean();
        this.markersWidget.clean();
        this.selectedRegions = [];
-       //gui.viewTrick();
+       gui.viewTrick();
      });
 
 

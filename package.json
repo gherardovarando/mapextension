@@ -24,7 +24,7 @@
   "dependencies": {
     "electrongui": "github:gherardovarando/electrongui",
     "jsoneditor": "^5.9.3",
-    "leaflet": "^1.0.3",
+    "leaflet": "^1.2.0",
     "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
     "leaflet-multilevel": "github:gherardovarando/leaflet-multilevel",
     "leaflet-map-builder": "github:gherardovarando/leaflet-map-builder",

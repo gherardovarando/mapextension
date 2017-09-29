@@ -26,7 +26,7 @@
     "jsoneditor": "^5.9.3",
     "leaflet": "^1.0.3",
     "leaflet-csvtiles": "github:gherardovarando/leaflet-csvtiles",
-    "leaflet-multislice": "github:gherardovarando/leaflet-multislice",
+    "leaflet-multilevel": "github:gherardovarando/leaflet-multilevel",
     "leaflet-map-builder": "github:gherardovarando/leaflet-map-builder",
     "leaflet-draw": "^0.4.9",
     "leaflet-geometryutil": "^0.8.0",

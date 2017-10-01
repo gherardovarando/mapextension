@@ -8,34 +8,33 @@
   <title>map name here</title>
 
   <link rel="stylesheet" href="style/leaflet.css" />
-
+  <link rel="stylesheet" href="style/leaflet.draw.css" />
+  <style>
+      body {
+          padding: 0;
+          margin: 0;
+      }
+      html, body, #map {
+          height: 100%;
+          width: 100%;
+          overflow: hidden;
+      }
+  </style>
 
 </head>
 
 <body>
-
-  <div id="map" style="height:600px; width: 800px;"></div>
+  <div id="map" ></div>
 
 </body>
 
 
 <script>
 
-const MapExtension = 
+ const MapViewer = require('./MapViewer.js');
+ let viewer = new MapViewer();
+ viewer.setMap();
 
-  var map = L.map('map', {
-    crs: L.CRS.Simple,
-    zoomControl: false,
-    multislice: false, //change if it's not a multislice
-    sliceControl: {
-      position: 'bottomleft'
-    }
-  });
-
-  var builder = L.mapBuilder(map);
-
-
-  map.fitWorld();
 </script>
 
 

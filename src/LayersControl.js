@@ -55,19 +55,19 @@
      this.tabs = new TabGroup(this.content);
      this.baselist = new ListGroup(this.content);
      this.baselist.addSearch({
-       hide:true,
+       hide: true,
        toggle: true
      });
      this.tileslist = new ListGroup(this.content);
      this.tileslist.addSearch({
-       hide:true,
+       hide: true,
        toggle: true
      });
      this.tileslist.element.classList.add('tiles-list');
      this.overlaylist = new ListGroup(this.content);
      this.overlaylist.addSearch({
-      hide:true,
-      toggle: true
+       hide: true,
+       toggle: true
      });
      this.datalist = new ListGroup(this.content);
      this.overlaylist.hide();
@@ -125,37 +125,58 @@
     * Sets the map manager and listens to its events.
     * @param {builder} builder The map builder.
     */
-   setBuilder(builder) {
-     this.builder = builder;
+   setViewer(viewer) {
+     this.viewer = viewer;
      this.selectedRegions = [];
      this.selectedMarkers = [];
 
-     this.builder.on('clear', () => {
-       this.baselist.clean();
-       this.tileslist.clean();
-       this.overlaylist.clean();
-       this.datalist.clean();
-       this.baseLayer = null;
-       gui.viewTrick();
+     this.viewer.addEventListener('ipc-message', (e) => {
+       this._parseViewerMsg(e);
      });
 
-     this.builder.on('error', (e) => {
-       gui.notify(e.error);
-     });
-
-     //when clean mapmanager clean interface
-     this.builder.on('clear', () => {
-       this.regionsWidget.clean();
-       this.markersWidget.clean();
-       this.selectedRegions = [];
-       gui.viewTrick();
-     });
+   }
 
 
-     this.builder.on('add:drawnitems', (e) => {
-       this.builder._configuration.layers.drawnItems = e.configuration;
-       gui.viewTrick();
-     });
+   _parseViewerMsg(e) {
+     let ch = e.channel;
+     let msg = e.args[0];
+
+     switch (ch) {
+       case 'loading':
+         gui.setProgress(100 * (msg.i+1) / msg.tot);
+         break;
+       case 'clear':
+         this.baselist.clean();
+         this.tileslist.clean();
+         this.overlaylist.clean();
+         this.datalist.clean();
+         this.baseLayer = null;
+         this.regionsWidget.clean();
+         this.markersWidget.clean();
+         this.selectedRegions = [];
+         gui.viewTrick();
+         break;
+       case 'reload':
+
+         break;
+       case 'set:configuration':
+         break;
+       case 'set:options':
+
+         break;
+       case 'load:layer':
+         this.addLayer(msg.configuration);
+         break;
+       case 'load:control':
+         break;
+       case 'set:map':
+         break;
+       case 'add:drawnitems':
+         this.builder._configuration.layers.drawnItems = msg.configuration;
+         gui.viewTrick();
+         break;
+       default:
+     }
 
    }
 
@@ -163,7 +184,7 @@
 
    }
 
-   addLayer(layer, configuration, where) {
+   addLayer(configuration) {
      let tools;
      let customMenuItems = [];
      let list;
@@ -174,27 +195,22 @@
          } else {
            list = this.tileslist;
          }
-         tools = this.createToolbox(layer, configuration, {
+         tools = this.createToolbox(configuration, {
            opacity: true
          });
 
          if (configuration.baseLayer) {
            if (!this.baseLayer) {
-             this.baseLayer = layer;
-             where.addLayer(this.baseLayer);
-             this.builder.map.setSlice(configuration.options.minSlice);
+             this.baseLayer = configuration;
            }
          }
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             if (this.baseLayer === layer) {
+             if (this.baseLayer === configuration) {
                return;
              }
-             where.removeLayer(layer);
              list.removeItem(configuration._id);
-             let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
            }
          }));
          customMenuItems.push(new MenuItem({
@@ -205,11 +221,9 @@
            type: 'checkbox',
            checked: configuration.baseLayer,
            click: (menuItem) => {
-             if (this.baseLayer === layer) return;
-             this.builder.map.removeLayer(layer);
+             if (this.baseLayer === configuration) return;
              list.removeItem(`${configuration._id}`);
              configuration.baseLayer = menuItem.checked;
-             this.builder.loadLayer(configuration);
            }
          }));
          break;
@@ -219,26 +233,23 @@
          } else {
            list = this.tileslist;
          }
-         tools = this.createToolbox(layer, configuration, {
+         tools = this.createToolbox(configuration, {
            opacity: true
          });
 
          if (configuration.baseLayer) {
            if (!this.baseLayer) {
-             this.baseLayer = layer;
-             where.addLayer(this.baseLayer);
+             this.baseLayer = configuration;
            }
          }
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             if (this.baseLayer === layer) {
+             if (this.baseLayer === configuration) {
                return;
              }
-             where.removeLayer(layer);
              list.removeItem(configuration._id);
              let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
            }
          }));
          customMenuItems.push(new MenuItem({
@@ -249,30 +260,26 @@
            type: 'checkbox',
            checked: configuration.baseLayer,
            click: (menuItem) => {
-             if (this.baseLayer === layer) return;
-             this.builder.map.removeLayer(layer);
+             if (this.baseLayer === configuration) return;
              list.removeItem(`${configuration._id}`);
              configuration.baseLayer = menuItem.checked;
-             this.builder.loadLayer(configuration);
            }
          }));
          break;
        case 'imageOverlay':
-         tools = this.createToolbox(layer, configuration, {
+         tools = this.createToolbox(configuration, {
            opacity: true
          });
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
              this.tileslist.removeItem(`${configuration._id}`);
-             let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
            }
          }));
          list = this.tileslist;
          break;
        case 'featureGroup':
-         tools = this.createToolbox(layer, configuration, {
+         tools = this.createToolbox(configuration, {
            opacity: true,
            color: true,
            weight: true
@@ -285,14 +292,12 @@
                return;
              }
              this.overlaylist.removeItem(`${configuration._id}`);
-             let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
            }
          }));
          list = this.overlaylist;
          break;
        case 'layerGroup':
-         tools = this.createToolbox(layer, configuration, {
+         tools = this.createToolbox(configuration, {
            opacity: true,
            color: true,
            weight: true
@@ -301,25 +306,18 @@
            label: 'Delete',
            click: () => {
              this.overlaylist.removeItem(`${configuration._id}`);
-             let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
            }
          }));
          list = this.overlaylist;
          break;
        case 'polygon':
          list = this.regionsWidget;
-         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
              color: configuration.options.color,
              defineNew: true,
              click: (col) => {
-               layer.setStyle({
-                 color: col,
-                 fillColor: col
-               });
                configuration.options.color = col;
                configuration.options.fillColor = col;
              }
@@ -332,27 +330,19 @@
                this._deleteRegionsCheck(this.selectedRegions);
                this.selectedRegions = [];
              } else {
-               this._deleteRegionsCheck([{
-                 configuration: configuration,
-                 layer: layer
-               }]);
+               this._deleteRegionsCheck([configuration]);
              }
            }
          }));
          break;
        case 'rectangle':
          list = this.regionsWidget;
-         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
              color: configuration.options.color,
              defineNew: true,
              click: (col) => {
-               layer.setStyle({
-                 color: col,
-                 fillColor: col
-               });
                configuration.options.color = col;
                configuration.options.fillColor = col;
              }
@@ -365,27 +355,19 @@
                this._deleteRegionsCheck(this.selectedRegions);
                this.selectedRegions = [];
              } else {
-               this._deleteRegionsCheck([{
-                 configuration: configuration,
-                 layer: layer
-               }]);
+               this._deleteRegionsCheck([configuration]);
              }
            }
          }));
          break;
        case 'circle':
          list = this.regionsWidget;
-         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Color',
            submenu: colors.menu({
              color: configuration.options.color,
              defineNew: true,
              click: (col) => {
-               layer.setStyle({
-                 color: col,
-                 fillColor: col
-               });
                configuration.options.color = col;
                configuration.options.fillColor = col;
              }
@@ -397,10 +379,7 @@
              if (this.selectedRegions.length > 0) {
                this._deleteRegionsCheck(this.selectedRegions);
              } else {
-               this._deleteRegionsCheck([{
-                 configuration: configuration,
-                 layer: layer
-               }]);
+               this._deleteRegionsCheck([configuration]);
              }
            }
          }));
@@ -410,7 +389,6 @@
          break;
        case 'marker':
          list = this.markersWidget;
-         where.addLayer(layer);
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
@@ -420,7 +398,7 @@
          customMenuItems.push(new MenuItem({
            label: 'Edit',
            click: () => {
-             this._editMarkerDetails(layer, configuration);
+             this._editMarkerDetails(configuration);
            }
          }));
          break;
@@ -428,22 +406,7 @@
          list = this.overlaylist;
 
      }
-     this._addToList(layer, configuration, where, customMenuItems, tools, list);
-     if (typeof layer.on === 'function') {
-       layer.on('remove', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
-           return;
-         }
-         list.deactiveItem(`${e.target._id}`);
-       });
-
-       layer.on('add', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
-           return;
-         }
-         list.activeItem(`${e.target._id}`);
-       });
-     }
+     this._addToList(configuration, customMenuItems, tools, list);
      gui.viewTrick();
    }
 
@@ -459,7 +422,7 @@
     * @param {Object} configuration json layer configuration.
     * @param {ListGroup} list target ListGroup.
     */
-   _addToList(layer, configuration, where, customMenuItems, tools, list) {
+   _addToList(configuration, customMenuItems, tools, list) {
      let txtTitle = input.input({
        value: configuration.name,
        className: 'list-input',
@@ -485,14 +448,14 @@
      let context = new Menu();
      context.append(new MenuItem({
        label: 'Search',
-       click: ()=>{
+       click: () => {
          list.search.toggle();
        }
      }));
      context.append(new MenuItem({
        label: 'Rename',
        click: () => {
-         this._rename(layer, configuration, list);
+         this._rename(configuration, list);
          //txtTitle.readOnly = false;
        }
      }));
@@ -511,35 +474,18 @@
        id: configuration._id,
        title: txtTitle,
        details: tools,
-       active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
+       active: false,
        oncontextmenu: () => {
          context.popup();
        },
        onclick: {
          active: (item, e) => {
            if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
-             this.selectedRegions.push({
-               configuration: configuration,
-               layer: layer,
-               where: where
-             });
-             layer.setStyle({
-               fillOpacity: 0.8
-             });
+             this.selectedRegions.push(configuration);
              gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker') {
-             this.selectedMarkers.push({
-               configuration: configuration,
-               layer: layer,
-               where: where
-             });
+             this.selectedMarkers.push(configuration);
              gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
-           } else {
-             if (configuration.baseLayer) {
-               where.removeLayer(this.baseLayer);
-               this.baseLayer = layer;
-             }
-             where.addLayer(layer);
            }
            if (tools) {
              tools.hide();
@@ -547,26 +493,13 @@
          },
          deactive: (item, e) => {
            if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
-             this.selectedRegions.splice(this.selectedRegions.indexOf({
-               configuration: configuration,
-               layer: layer,
-               where: where
-             }), 1);
+             this.selectedRegions.splice(this.selectedRegions.indexOf(configuration), 1);
              gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
-             layer.setStyle({
-               fillOpacity: configuration.options.fillOpacity || 0.3
-             });
            } else if (configuration.type === 'marker') {
-             this.selectedMarkers.splice(this.selectedMarkers.indexOf({
-               configuration: configuration,
-               layer: layer,
-               where: where
-             }), 1);
+             this.selectedMarkers.splice(this.selectedMarkers.indexOf(configuration), 1);
              gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
-             if (!configuration.baseLayer) {
-               where.removeLayer(layer);
-             } else {
+             if (!configuration.baseLayer) {} else {
                list.activeItem(item);
              }
            }
@@ -588,7 +521,7 @@
     * @param {boolean} hasColorControl
     * @param {boolean} hasRadiusControl
     */
-   createToolbox(layer, configuration, options) {
+   createToolbox(configuration, options) {
      let hasOpacityControl = options.opacity;
      let hasColorControl = options.color;
      let hasRadiusControl = options.radius;
@@ -617,13 +550,6 @@
          placeholder: 'color',
          oninput: (inp) => {
            colorPickerContainer.style.backgroundColor = inp.value;
-           if (typeof layer.setStyle === 'function') {
-             layer.setStyle({
-               fillColor: inp.value,
-               color: inp.value
-             });
-             this.builder.setDrawingColor(inp.value);
-           }
          },
          onchange: (inp) => {
 
@@ -648,9 +574,7 @@
          ],
          value: configuration.weight || 3,
          oninput: (inp) => {
-           if (typeof layer.setRadius === 'function') {
-             layer.setRadius(inp.value);
-           }
+
          }
        });
        second.appendChild(radiusCell);
@@ -671,11 +595,7 @@
          value: configuration.options.weight || configuration.weight || 3,
          oninput: (inp) => {
            configuration.weight = inp.value;
-           if (typeof layer.setStyle === 'function') {
-             layer.setStyle({
-               weight: inp.value
-             });
-           }
+
          }
        });
        third.appendChild(weightCell);
@@ -694,17 +614,7 @@
          value: configuration.options.opacity || configuration.opacity,
          placeholder: 'opacity',
          oninput: (inp) => {
-           if (layer.setOpacity) {
-             layer.setOpacity(inp.value);
-             configuration.options.opacity = inp.value;
-           }
-           if (layer.setStyle) {
-             configuration.options.opacity = inp.value;
-             layer.setStyle({
-               opacity: inp.value,
-               fillOpacity: inp.value / 3
-             });
-           }
+
          }
        });
        first.appendChild(opacityCell);
@@ -713,37 +623,19 @@
    }
 
 
-   _removeRegion(configuration, layer, where) {
-     if (where === this.builder._drawnItems) {
-       this.builder._drawnItems.removeLayer(layer);
-       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-       this.regionsWidget.removeItem(configuration._id);
-       delete this.builder._configuration.layers.drawnItems.layers[key];
-       this.selectedRegions.splice(this.selectedRegions.indexOf({
-         configuration: configuration,
-         layer: layer,
-         where: where
-       }), 1);
-     }
+   _removeRegion(configuration) {
+     this.regionsWidget.removeItem(configuration._id);
+     this.selectedRegions.splice(this.selectedRegions.indexOf(configuration), 1);
    }
 
 
 
-   _removeMarker(configuration, layer, where) {
-     if (where === this.builder._drawnItems) {
-       this.builder._drawnItems.removeLayer(layer);
-       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-       this.markersWidget.removeItem(configuration._id);
-       delete this.builder._configuration.layers.drawnItems.layers[key];
-       this.selectedMarkers.splice(this.selectedMarkers.indexOf({
-         configuration: configuration,
-         layer: layer,
-         where: where
-       }), 1);
-     }
+   _removeMarker(configuration) {
+     this.markersWidget.removeItem(configuration._id);
+     this.selectedMarkers.splice(this.selectedMarkers.indexOf(configuration), 1);
    }
 
-   _rename(layer, configuration, list) {
+   _rename(configuration, list) {
      let txtLayerName = input.input({
        type: "text",
        id: `txtLayerName_${configuration._id}_modal`,
@@ -757,14 +649,12 @@
        onsubmit: () => {
          configuration.name = txtLayerName.value;
          list.setTitle(configuration._id, configuration.name);
-         layer.setTooltipContent(txtLayerName.value);
-         layer.setPopupContent(`<strong>${txtLayerName.value}</strong> <p> ${configuration.details}</p>`);
        }
      });
      modal.show();
    }
 
-   _editMarkerDetails(marker, configuration) {
+   _editMarkerDetails(configuration) {
      // OPEN A MODAL ASKING FOR DETAILS.
      var modal = new Modal({
        title: "Edit marker details",
@@ -773,15 +663,11 @@
          configuration.name = txtMarkerName.value;
          configuration.details = taMarkerDetails.value;
          this.markersWidget.setTitle(configuration._id, configuration.name);
-         marker.setTooltipContent(txtMarkerName.value);
-         marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
        },
        oncancel: () => {
          configuration.name = txtMarkerName.value;
          configuration.details = taMarkerDetails.value;
          this.markersWidget.setTitle(configuration._id, configuration.name);
-         marker.setTooltipContent(txtMarkerName.value);
-         marker.setPopupContent(`<strong>${txtMarkerName.value}</strong> <p> ${taMarkerDetails.value}</p>`);
        }
      });
      let grid = new Grid(2, 2);
@@ -817,7 +703,7 @@
      }, (id) => {
        if (id > 0) {
          markers.map((c) => {
-           this._removeMarker(c.configuration, c.layer, c.where);
+           this._removeMarker(c.configuration);
          });
        }
      });
@@ -834,11 +720,14 @@
      }, (id) => {
        if (id > 0) {
          regions.map((c) => {
-           this._removeRegion(c.configuration, c.layer, c.where);
+           this._removeRegion(c.configuration);
          });
        }
      });
    }
+
+
+
 
 
  }

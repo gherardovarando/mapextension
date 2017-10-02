@@ -30,137 +30,190 @@ require('leaflet-multilevel');
 const snap = require(`leaflet-snap`);
 const mapBuilder = require('leaflet-map-builder');
 const {
-    ipcRenderer
+  ipcRenderer
 } = require('electron');
 
-const builderEvs = ['reload', 'clear']
+const builderEvs = ['reload', 'clear', 'set:configuration', 'load:control', 'load:layer', 'set:map']
 const drawEvs = ['']
 
+const CRSs = {
+  simple: L.CRS.Simple,
+  EPSG3395: L.CRS.EPSG3395,
+  EPSG3857: L.CRS.EPSG3857,
+  EPSG4326: L.CRS.EPSG4326
+};
+
+
+let send = function(ch, msg) {
+  ipcRenderer.sendToHost(ch, msg);
+}
+
 class MapViewer {
-    constructor() {
-        this.mapCont = document.getElementById('map');
-        //this.mapCont.style.height = '100%';
-        this.mapCont.style['z-index'] = 0;
+  constructor() {
+    this.mapCont = document.getElementById('map');
+    //this.mapCont.style.height = '100%';
+    this.mapCont.style['z-index'] = 0;
 
-        ipcRenderer.on('exec', (event, message) => {
-            let f = this[message.cmd];
-            let par = message.par;
-            if (typeof f === 'function') {
-                f(par);
-            }
-        });
+    ipcRenderer.on('exec', (event, message) => {
+      let f = this[message.cmd];
+      let par = message.par;
+      if (typeof f === 'function') {
+        f(par);
+      }
+    });
 
-        ipcRenderer.on('data', (event, message) => {
-            let data = this.data[message.key];
-            event.sender.send('data', data);
-        });
+    ipcRenderer.on('data', (event, message) => {
+      // let data = this.data[message.key];
+      // event.sender.send('data', data);
+    });
 
-        ipcRenderer.on('configuration', (event, message) => {
-            if (this.builder) {
-                event.sender.send('configuration', this.builder._configuration);
-            }
-        });
-    }
+    ipcRenderer.on('configuration', (event, message) => {
+      if (this.builder) {
+        console.log(message);
+        try {
+          this.builder.setConfiguration(message);
+        } catch (e) {
+          throw (e);
+        } finally {
 
-    setMap(options) {
-        options = options || {};
-        this.map = L.map('map', options.map); //initialize map
-        this.builder = new L.MapBuilder(this.map, options.builder); //initialize the map builder
-        L.tileLayer('http://a.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
-        this.map.fitWorld();
-
-        this.builder.on('set:configuration',(e)=>{
-          ipcRenderer.send('set:configuration',e);
-        });
-    }
+        }
+      }
+    });
 
 
-    setConfiguration(configuration) {
-        this.builder.setConfiguration(configuration);
-    }
+    ipcRenderer.on('options', (event, message) => {
+      if (this.builder) {
+        let options = message || {};
+        options.loading = (i, tot) => {
+          send('loading', {
+            i: i,
+            tot: tot
+          });
+        }
+        options.controls = options.controls || {};
+        options.controls.layers = {
+          "autoZIndex": false,
+          "sortLayers": false
+        };
+        this.builder.setOptions(options);
+      }
+    });
 
-    clear() {
+    ipcRenderer.on('clear', (event, message) => {
+      if (this.builder) {
         this.builder.clear();
-    }
+      }
+    });
 
+    ipcRenderer.on('reload', (event, message) => {
+      if (this.builder) {
+        this.builder.reload();
+      }
+    });
 
-    /**
-     * Register the events related to leaflet draw
-     */
-    _drawEvents() {
-        this.mapBuilder.map.on(L.Draw.Event.CREATED, (e) => {
-            let type = e.layerType,
-                layer = e.layer;
-            let config = {
-                type: type,
-                options: layer.options
-            }
-            if (layer.getLatLngs) {
-                config.latlngs = layer.getLatLngs();
-            }
-            if (layer.getLatLng) {
-                config.latlng = layer.getLatLng();
-            }
-            if (layer.getRadius) {
-                config.radius = layer.getRadius();
-            }
-            this.mapBuilder.loadLayer(config, this.mapBuilder._drawnItems);
+    ipcRenderer.on('map', (event, message) => {
+      let options = {
+        zoomSnap: message.zoomSnap,
+        zoomDelta: message.zoomDelta,
+        crs: CRSs[message.crs],
+        zoomControl: message.zoomControl,
+        multilevel: message.multilevel,
+        levelControl: message.levelControl
+      };
 
-            let key = util.nextKey(this.mapBuilder._configuration.layers.drawnItems.layers);
-            this.mapBuilder._configuration.layers.drawnItems.layers[key] = config;
+      this.map = L.map('map', options); //initialize map
+      this.builder = new L.MapBuilder(this.map); //initialize the map builder
+      builderEvs.map((evName) => {
+        this.builder.on(evName, (msg) => {
+          send(evName, msg);
         });
+      });
+      this.map.fitWorld();
+      this._drawEvents();
+    });
 
-        // when items are removed
-        this.mapBuilder.map.on(L.Draw.Event.DELETED, (e) => {
-            var layers = e.layers;
-            layers.eachLayer((layer) => {
-                this.mapBuilder._drawnItems.removeLayer(layer);
-                if (layer instanceof L.Marker) {
-                    this._removeMarker(layer._id);
-                } else if (layer instanceof L.Rectangle) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Polygon) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Circle) {
-                    this._removeRegion(layer._id);
-                } else if (layer instanceof L.Polyline) {}
-            });
-        });
+  }
 
-        //whne items are edited
-        this.mapBuilder.map.on(L.Draw.Event.EDITED, (e) => {
-            let layers = e.layers;
-            layers.eachLayer((layer) => {
-                let type = null;
-                if (layer instanceof L.Marker) {
-                    type = 'marker';
-                } else if (layer instanceof L.Rectangle) {
-                    type = 'rectangle';
-                } else if (layer instanceof L.Polygon) {
-                    type = 'polygon';
-                } else if (layer instanceof L.Circle) {
-                    type = 'circle';
-                } else if (layer instanceof L.Polyline) {
-                    type = 'polyline';
-                }
-                let config = {
-                    type: type,
-                    options: layer.options
-                }
-                if (layer.getLatLngs) {
-                    config.latlngs = layer.getLatLngs();
-                }
-                if (layer.getLatLng) {
-                    config.latlng = layer.getLatLng();
-                }
-                if (layer.getRadius) {
-                    config.radius = layer.getRadius();
-                }
-                //we have to change the configuration object, the layer in the map is already modified
-                this.mapBuilder._configuration.layers.drawnItems.layers[layer._id] = config;
-            });
-        });
-    }
+
+
+
+  /**
+   * Register the events related to leaflet draw
+   */
+  _drawEvents() {
+    this.builder.map.on(L.Draw.Event.CREATED, (e) => {
+      let type = e.layerType,
+        layer = e.layer;
+      let config = {
+        type: type,
+        options: layer.options
+      }
+      if (layer.getLatLngs) {
+        config.latlngs = layer.getLatLngs();
+      }
+      if (layer.getLatLng) {
+        config.latlng = layer.getLatLng();
+      }
+      if (layer.getRadius) {
+        config.radius = layer.getRadius();
+      }
+      this.builder.loadLayer(config, this.builder._drawnItems);
+
+      let key = util.nextKey(this.builder._configuration.layers.drawnItems.layers);
+      this.builder._configuration.layers.drawnItems.layers[key] = config;
+    });
+
+    // when items are removed
+    this.builder.map.on(L.Draw.Event.DELETED, (e) => {
+      var layers = e.layers;
+      layers.eachLayer((layer) => {
+        this.builder._drawnItems.removeLayer(layer);
+        if (layer instanceof L.Marker) {
+          this._removeMarker(layer._id);
+        } else if (layer instanceof L.Rectangle) {
+          this._removeRegion(layer._id);
+        } else if (layer instanceof L.Polygon) {
+          this._removeRegion(layer._id);
+        } else if (layer instanceof L.Circle) {
+          this._removeRegion(layer._id);
+        } else if (layer instanceof L.Polyline) {}
+      });
+    });
+
+    //whne items are edited
+    this.builder.map.on(L.Draw.Event.EDITED, (e) => {
+      let layers = e.layers;
+      layers.eachLayer((layer) => {
+        let type = null;
+        if (layer instanceof L.Marker) {
+          type = 'marker';
+        } else if (layer instanceof L.Rectangle) {
+          type = 'rectangle';
+        } else if (layer instanceof L.Polygon) {
+          type = 'polygon';
+        } else if (layer instanceof L.Circle) {
+          type = 'circle';
+        } else if (layer instanceof L.Polyline) {
+          type = 'polyline';
+        }
+        let config = {
+          type: type,
+          options: layer.options
+        }
+        if (layer.getLatLngs) {
+          config.latlngs = layer.getLatLngs();
+        }
+        if (layer.getLatLng) {
+          config.latlng = layer.getLatLng();
+        }
+        if (layer.getRadius) {
+          config.radius = layer.getRadius();
+        }
+        //we have to change the configuration object, the layer in the map is already modified
+        this.builder._configuration.layers.drawnItems.layers[layer._id] = config;
+      });
+    });
+  }
 
 
 

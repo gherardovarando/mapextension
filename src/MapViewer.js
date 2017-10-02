@@ -44,6 +44,19 @@ const CRSs = {
 };
 
 
+let nextKey = function(obj) {
+    let finish = false;
+    let key = 0;
+    while (!finish) {
+        if (Object.keys(obj).indexOf(`${key}`) >= 0) {
+            key++;
+        } else {
+            finish = true;
+        }
+    }
+    return key;
+}
+
 let send = function(ch, msg) {
   ipcRenderer.sendToHost(ch, msg);
 }
@@ -159,7 +172,7 @@ class MapViewer {
       }
       this.builder.loadLayer(config, this.builder._drawnItems);
 
-      let key = util.nextKey(this.builder._configuration.layers.drawnItems.layers);
+      let key = nextKey(this.builder._configuration.layers.drawnItems.layers);
       this.builder._configuration.layers.drawnItems.layers[key] = config;
     });
 

@@ -354,6 +354,9 @@ class MapExtension extends GuiExtension {
     let mapCont = document.createElement('WEBVIEW');
     this.mapPane.top.appendChild(mapCont);
     mapCont.setAttribute('nodeintegration', '');
+    mapCont.setAttribute('plugins', '');
+    mapCont.setAttribute('disablewebsecurity', '');
+    mapCont.setAttribute('webpreferences', '');
     mapCont.style.width = '100%';
     mapCont.style.height = '100%';
     mapCont.style.overflow = 'hidden';
@@ -363,8 +366,8 @@ class MapExtension extends GuiExtension {
     this.mapCont.addEventListener('dom-ready', () => {
       if (isDev) this.mapCont.openDevTools();
       this._ready = true;
-      this._send('map',this._options.map)
-      this._send('options',this._options.builder);
+      this._send('map', this._options.map)
+      this._send('options', this._options.builder);
     });
 
 
@@ -373,13 +376,18 @@ class MapExtension extends GuiExtension {
       let msg = e.args[0];
 
       switch (ch) {
+        case 'loading':
+          gui.setProgress(100 * (msg.i + 1) / msg.tot);
+          break;
         case 'clear':
           this._isLoaded = false;
           break;
         case 'reload':
           this._isLoaded = true;
+          //gui.stopWaiting();
           break;
         case 'set:configuration':
+          //gui.startWaiting();
           this.activeConfiguration = e.configuration;
           this.configEditor.set(this.activeConfiguration);
           break;
@@ -1228,8 +1236,8 @@ class MapExtension extends GuiExtension {
 
 
 
-  _send(ch,msg){
-    if (this._ready && this.mapCont && this.mapCont.send) this.mapCont.send(ch,msg);
+  _send(ch, msg) {
+    if (this._ready && this.mapCont && this.mapCont.send) this.mapCont.send(ch, msg);
   }
 
 

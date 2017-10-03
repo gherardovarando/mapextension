@@ -55,19 +55,19 @@
      this.tabs = new TabGroup(this.content);
      this.baselist = new ListGroup(this.content);
      this.baselist.addSearch({
-       hide:true,
+       hide: true,
        toggle: true
      });
      this.tileslist = new ListGroup(this.content);
      this.tileslist.addSearch({
-       hide:true,
+       hide: true,
        toggle: true
      });
      this.tileslist.element.classList.add('tiles-list');
      this.overlaylist = new ListGroup(this.content);
      this.overlaylist.addSearch({
-      hide:true,
-      toggle: true
+       hide: true,
+       toggle: true
      });
      this.datalist = new ListGroup(this.content);
      this.overlaylist.hide();
@@ -155,6 +155,8 @@
        this.builder._configuration.layers.drawnItems = e.configuration;
        gui.viewTrick();
      });
+
+     this._drawEvents()
 
    }
 
@@ -423,6 +425,38 @@
            }
          }));
          break;
+       case 'circleMarker':
+         list = this.markersWidget;
+         where.addLayer(layer);
+         customMenuItems.push(new MenuItem({
+           label: 'Delete',
+           click: () => {
+             this._deleteMarkerCheck(this.selectedMarkers);
+           }
+         }));
+         customMenuItems.push(new MenuItem({
+           label: 'Edit',
+           click: () => {
+             this._editMarkerDetails(layer, configuration);
+           }
+         }));
+         break;
+       case 'circlemarker':
+         list = this.markersWidget;
+         where.addLayer(layer);
+         customMenuItems.push(new MenuItem({
+           label: 'Delete',
+           click: () => {
+             this._deleteMarkerCheck(this.selectedMarkers);
+           }
+         }));
+         customMenuItems.push(new MenuItem({
+           label: 'Edit',
+           click: () => {
+             this._editMarkerDetails(layer, configuration);
+           }
+         }));
+         break;
        default:
          list = this.overlaylist;
 
@@ -430,14 +464,14 @@
      this._addToList(layer, configuration, where, customMenuItems, tools, list);
      if (typeof layer.on === 'function') {
        layer.on('remove', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circleMarker'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.deactiveItem(`${e.target._id}`);
        });
 
        layer.on('add', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circleMarker'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.activeItem(`${e.target._id}`);
@@ -484,8 +518,8 @@
      let context = new Menu();
      context.append(new MenuItem({
        label: 'Search',
-       click: ()=>{
-         list.search.toggle();
+       click: () => {
+         list.search.show();
        }
      }));
      context.append(new MenuItem({
@@ -506,6 +540,9 @@
      customMenuItems.map((menuItem) => {
        context.append(menuItem);
      });
+     layer.on('contextmenu', () => {
+       context.popup();
+     });
      list.addItem({
        id: configuration._id,
        title: txtTitle,
@@ -523,15 +560,20 @@
                where: where
              });
              layer.setStyle({
-               fillOpacity: 0.8
+               fillOpacity: 1
              });
              gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
-           } else if (configuration.type === 'marker') {
+           } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.push({
                configuration: configuration,
                layer: layer,
                where: where
              });
+             if (configuration.type.toLowerCase() === 'circlemarker') {
+               layer.setStyle({
+                 fillOpacity: 1
+               });
+             }
              gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (configuration.baseLayer) {
@@ -555,12 +597,17 @@
              layer.setStyle({
                fillOpacity: configuration.options.fillOpacity || 0.3
              });
-           } else if (configuration.type === 'marker') {
+           } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.splice(this.selectedMarkers.indexOf({
                configuration: configuration,
                layer: layer,
                where: where
              }), 1);
+             if (configuration.type.toLowerCase() === 'circlemarker') {
+               layer.setStyle({
+                 fillOpacity: configuration.options.fillOpacity || 0.3
+               });
+             }
              gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (!configuration.baseLayer) {
@@ -753,6 +800,7 @@
        title: `rename ${configuration.type}`,
        height: 'auto',
        body: txtLayerName,
+       parent: gui.extensions.MapExtension,
        onsubmit: () => {
          configuration.name = txtLayerName.value;
          list.setTitle(configuration._id, configuration.name);
@@ -836,6 +884,89 @@
            this._removeRegion(c.configuration, c.layer, c.where);
          });
        }
+     });
+   }
+
+
+
+   /**
+    * Register the events related to leaflet draw
+    */
+   _drawEvents() {
+     this.builder.map.on(L.Draw.Event.CREATED, (e) => {
+       let type = e.layerType,
+         layer = e.layer;
+       let config = {
+         type: type,
+         options: layer.options
+       }
+       if (layer.getLatLngs) {
+         config.latlngs = layer.getLatLngs();
+       }
+       if (layer.getLatLng) {
+         config.latlng = layer.getLatLng();
+       }
+       if (layer.getRadius) {
+         config.options.radius = layer.getRadius();
+       }
+       this.builder.loadLayer(config, this.builder._drawnItems);
+
+       let key = util.nextKey(this.builder._configuration.layers.drawnItems.layers);
+       this.builder._configuration.layers.drawnItems.layers[key] = config;
+     });
+
+     // when items are removed
+     this.builder.map.on(L.Draw.Event.DELETED, (e) => {
+       var layers = e.layers;
+       layers.eachLayer((layer) => {
+         this.builder._drawnItems.removeLayer(layer);
+         if (layer instanceof L.Marker) {
+           this._removeMarker(layer._configuration, layer, this.builder._drawnItems);
+         } else if (layer instanceof L.Rectangle) {
+           this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
+         } else if (layer instanceof L.Polygon) {
+           this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
+         } else if (layer instanceof L.Circle) {
+           this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
+         } else if (layer instanceof L.Polyline) {}
+       });
+     });
+
+     //whne items are edited
+     this.builder.map.on(L.Draw.Event.EDITED, (e) => {
+       let layers = e.layers;
+       layers.eachLayer((layer) => {
+         let type = null;
+         if (layer instanceof L.Marker) {
+           type = 'marker';
+         } else if (layer instanceof L.Rectangle) {
+           type = 'rectangle';
+         } else if (layer instanceof L.Polygon) {
+           type = 'polygon';
+         } else if (layer instanceof L.Circle) {
+           type = 'circle';
+         } else if (layer instanceof L.Polyline) {
+           type = 'polyline';
+         }
+         let config = {
+           type: type,
+           tooltip: layer._configuration.tooltip,
+           popup: layer._configuration.popup,
+           options: layer.options
+         }
+         if (layer.getLatLngs) {
+           config.latlngs = layer.getLatLngs();
+         }
+         if (layer.getLatLng) {
+           config.latlng = layer.getLatLng();
+         }
+         if (layer.getRadius) {
+           config.radius = layer.getRadius();
+         }
+         let key = util.findKeyId(layer._configuration._id, this.builder._configuration.layers.drawnItems.layers);
+         //we have to change the configuration object, the layer in the map is already modified
+         this.builder._configuration.layers.drawnItems.layers[key] = config;
+       });
      });
    }
 

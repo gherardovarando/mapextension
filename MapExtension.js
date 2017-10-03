@@ -417,7 +417,6 @@ class MapExtension extends GuiExtension {
       this.configEditor.set(this.activeConfiguration);
 
     });
-    this._drawEvents();
     this.layersControl.setBuilder(this.mapBuilder); //link the layerscontrol to the mapBuilder
 
     this.sidebarOverlay = new Sidebar(this.element, {
@@ -738,12 +737,13 @@ class MapExtension extends GuiExtension {
       onclick: {
         active: () => {
           this.mapsList.deactiveAll();
-          this.mapsList.hideAllDetails();
+          //this.mapsList.hideAllDetails();
           //this.mapsList.showDetails(configuration._id);
           this.mapBuilder.setConfiguration(configuration);
+          gui.viewTrick();
         },
         deactive: () => {
-          this.mapsList.hideAllDetails();
+          //this.mapsList.hideAllDetails();
           this.mapBuilder.clear();
         }
       }
@@ -1192,83 +1192,7 @@ class MapExtension extends GuiExtension {
     })).show();
   }
 
-  /**
-   * Register the events related to leaflet draw
-   */
-  _drawEvents() {
-    this.mapBuilder.map.on(L.Draw.Event.CREATED, (e) => {
-      let type = e.layerType,
-        layer = e.layer;
-      let config = {
-        type: type,
-        options: layer.options
-      }
-      if (layer.getLatLngs) {
-        config.latlngs = layer.getLatLngs();
-      }
-      if (layer.getLatLng) {
-        config.latlng = layer.getLatLng();
-      }
-      if (layer.getRadius) {
-        config.radius = layer.getRadius();
-      }
-      this.mapBuilder.loadLayer(config, this.mapBuilder._drawnItems);
 
-      let key = util.nextKey(this.mapBuilder._configuration.layers.drawnItems.layers);
-      this.mapBuilder._configuration.layers.drawnItems.layers[key] = config;
-    });
-
-    // when items are removed
-    this.mapBuilder.map.on(L.Draw.Event.DELETED, (e) => {
-      var layers = e.layers;
-      layers.eachLayer((layer) => {
-        this.mapBuilder._drawnItems.removeLayer(layer);
-        if (layer instanceof L.Marker) {
-          this._removeMarker(layer._id);
-        } else if (layer instanceof L.Rectangle) {
-          this._removeRegion(layer._id);
-        } else if (layer instanceof L.Polygon) {
-          this._removeRegion(layer._id);
-        } else if (layer instanceof L.Circle) {
-          this._removeRegion(layer._id);
-        } else if (layer instanceof L.Polyline) {}
-      });
-    });
-
-    //whne items are edited
-    this.mapBuilder.map.on(L.Draw.Event.EDITED, (e) => {
-      let layers = e.layers;
-      layers.eachLayer((layer) => {
-        let type = null;
-        if (layer instanceof L.Marker) {
-          type = 'marker';
-        } else if (layer instanceof L.Rectangle) {
-          type = 'rectangle';
-        } else if (layer instanceof L.Polygon) {
-          type = 'polygon';
-        } else if (layer instanceof L.Circle) {
-          type = 'circle';
-        } else if (layer instanceof L.Polyline) {
-          type = 'polyline';
-        }
-        let config = {
-          type: type,
-          options: layer.options
-        }
-        if (layer.getLatLngs) {
-          config.latlngs = layer.getLatLngs();
-        }
-        if (layer.getLatLng) {
-          config.latlng = layer.getLatLng();
-        }
-        if (layer.getRadius) {
-          config.radius = layer.getRadius();
-        }
-        //we have to change the configuration object, the layer in the map is already modified
-        this.mapBuilder._configuration.layers.drawnItems.layers[layer._id] = config;
-      });
-    });
-  }
 
   /**
    * Load a map to the present workspace

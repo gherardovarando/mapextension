@@ -202,7 +202,8 @@ class MapExtension extends GuiExtension {
       levelControl: true,
       zoomSnap: 1,
       zoomDelta: 1,
-      expert: isDev
+      expert: isDev,
+      drawingColor: "#ed8414"
     }
     this.maps = {};
     this.activeConfiguration = null;
@@ -248,7 +249,7 @@ class MapExtension extends GuiExtension {
         zoomSnap: this._settings.zoomSnap,
         zoomDelta: this._settings.zoomDelta,
         crs: CRSs[this._settings.crs],
-        zoomControl: false,
+        zoomControl: this._settings.zoomControl,
         multilevel: this._settings.multilevel,
         levelControl: this._settings.levelControl
       },
@@ -260,11 +261,13 @@ class MapExtension extends GuiExtension {
             draw: {
               polyline: false,
               marker: true,
+              circleMarker: false,
               polygon: {
                 allowIntersection: false,
+                snapDistance: 5,
                 shapeOptions: {
                   stroke: true,
-                  color: "#ed8414",
+                  color: this._settings.drawingColor,
                   weight: 4,
                   opacity: 1,
                   fill: true,
@@ -276,7 +279,7 @@ class MapExtension extends GuiExtension {
               rectangle: {
                 shapeOptions: {
                   stroke: true,
-                  color: "#ed8414",
+                  color: this._settings.drawingColor,
                   weight: 4,
                   opacity: 1,
                   fill: true,
@@ -285,7 +288,7 @@ class MapExtension extends GuiExtension {
                   clickable: true
                 }
               },
-              circle: false
+              circle: true
             },
             edit: {
               allowIntersection: false
@@ -546,6 +549,18 @@ class MapExtension extends GuiExtension {
     Kmap.appendChild(tmap);
     let cmap = util.div('cellconteiner');
     Kmap.appendChild(cmap);
+
+    input.input({
+      parent: cinterface,
+      className: 'cell',
+      type: 'color',
+      label: 'Drawing color',
+      value: this._settings.drawingColor,
+      oninput: (inp) => {
+        this._settings.drawingColor = inp.value;
+        needExtRel= true;
+      }
+    });
 
     input.checkButton({
       parent: cinterface,

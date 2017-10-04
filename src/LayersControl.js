@@ -142,6 +142,12 @@
        gui.notify(e.error);
      });
 
+     this.builder.on('load:control', (e) => {
+       if (e.controlType === 'draw') {
+         this.builder.map.addLayer(this.builder._drawnItems);
+       }
+     });
+
      //when clean mapmanager clean interface
      this.builder.on('clear', () => {
        this.regionsWidget.clean();
@@ -155,6 +161,8 @@
        this.builder._configuration.layers.drawnItems = e.configuration;
        gui.viewTrick();
      });
+
+     this.builder.on('a')
 
      this._drawEvents()
 
@@ -281,7 +289,7 @@
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
-             if (configuration.role = 'drawnItems') {
+             if (configuration.role && configuration.role.includes('drawnItems')) {
                gui.notify('You dont want to remove the drawnItems layer...');
                return;
              }
@@ -289,6 +297,24 @@
              let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
              delete this.builder._configuration.layers[key];
            }
+         }));
+         customMenuItems.push(new MenuItem({
+           label: 'Roles',
+           submenu: Menu.buildFromTemplate([{
+             label: 'Guide',
+             type: 'checkbox',
+             checked: typeof configuration.role === 'string' && configuration.role.includes('guide'),
+             click: () => {
+               if ((typeof configuration.role === 'string') && configuration.role.includes('guide')) {
+                 configuration.role = configuration.role.replace(/guide/g, '');
+               } else if (typeof configuration.role === 'string') {
+                 configuration.role = configuration.role + ' guide';
+               } else {
+                 configuration.role = 'guide';
+               }
+               this.builder.reload();
+             }
+           }])
          }));
          list = this.overlaylist;
          break;
@@ -671,7 +697,6 @@
                fillColor: inp.value,
                color: inp.value
              });
-             this.builder.setDrawingColor(inp.value);
            }
          },
          onchange: (inp) => {

@@ -123,7 +123,9 @@ class MapExtension extends GuiExtension {
       }, {
         label: 'Create map',
         click: () => {
-          this.createMap();
+          mapio.modal.createMap((conf) => {
+            this.addNewMap(conf);
+          });
         }
       }, {
         label: 'Export map',
@@ -155,7 +157,9 @@ class MapExtension extends GuiExtension {
               gui.notify('First load or create a map');
               return;
             }
-            this._modaltilelayer();
+            mapio.modal.tileLayer((conf) => {
+              this.addLayer(conf);
+            });
           }
         }, {
           label: 'CsvTiles ',
@@ -164,7 +168,9 @@ class MapExtension extends GuiExtension {
               gui.notify('First load or create a map');
               return;
             }
-            this._modalcsvlayer();
+            mapio.modal.csvTiles((conf) => {
+              this.addLayer(conf);
+            });
           }
         }, {
           label: 'Guide',
@@ -173,7 +179,9 @@ class MapExtension extends GuiExtension {
               gui.notify('First load or create a map');
               return;
             }
-            this._modalGuideLayer();
+            mapio.modal.guideLayer((conf) => {
+              this.addLayer(conf);
+            });
           }
         }]
       }, {
@@ -444,8 +452,6 @@ class MapExtension extends GuiExtension {
     });
     this.sidebarOverlay.addList(this.layersControl.regionsWidget);
     this.sidebarOverlay.addList(this.layersControl.markersWidget);
-
-    //this.regionAnalyzer = new RegionAnalyzer();
 
     /**
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
@@ -757,70 +763,8 @@ class MapExtension extends GuiExtension {
     this.show();
   }
 
-  /**
-   * Export the regions selected (TO DO)
-   *  @param  {Array} regions
-   */
-  exportsRegions(regions) {
-    dialog.showSaveDialog({
-      title: 'Export regions statistics',
-      type: 'normal',
-      filters: [{
-          name: 'CSV',
-          extensions: ['csv']
-        },
-        {
-          name: 'JSON',
-          extensions: ['json']
-        }
-      ]
-    }, (filename) => {
-      // let fields = ['name'];
-      // let cont = json2csv({
-      //   data: regions.map((reg) => {
-      //
-      //   }),
-      //   fields: fields
-      // });
-      // fs.writeFile(filename, cont);
-    });
-  }
 
-  /**
-   * Create new empty map, it shows a modal to select the name
-   */
-  createMap() {
-    let body = util.div();
-    let name = input.input({
-      id: 'newmapname-modal',
-      parent: body,
-      value: '',
-      autofocus: true,
-      label: '',
-      className: 'form-control',
-      width: '100%',
-      placeholder: 'new map name',
-      title: 'new map name',
-      type: 'text'
-    });
-    let modal = new Modal({
-      title: 'choose a name for the new map',
-      width: 'auto',
-      height: 'auto',
-      noCloseIcon: true,
-      parent: this,
-      onsubmit: () => {
-        let conf = mapio.baseConfiguration();
-        conf.name = name.value;
-        this.addNewMap(conf);
-      },
-      oncancel: () => {}
-    });
 
-    modal.addBody(body);
-    modal.show();
-
-  }
 
   /**
    * Shows a dialog to open a file and add the selected layer to the current map
@@ -950,248 +894,6 @@ class MapExtension extends GuiExtension {
     this.mapBuilder.loadLayer(conf);
     this.activeConfiguration.layers[`layer_${conf._id}`] = conf;
   }
-
-
-  /**
-   * Shows a modal to add a new csvTile layer
-   */
-  _modalcsvlayer() {
-    let body = util.div('cellconteiner');
-    let name = input.input({
-      id: 'namenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'name',
-      parent: body,
-      value: ''
-    });
-    let url = input.input({
-      id: 'urlnewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'tiles url template',
-      parent: body,
-      value: ''
-    });
-    let tileSize = input.input({
-      id: 'tilesizenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'tile size',
-      parent: body,
-      value: ''
-    });
-    let size = input.input({
-      id: 'sizenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'size',
-      parent: body,
-      value: ''
-    });
-    let bounds = input.input({
-      id: 'boundsnewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'bounds [[lat,lng],[lat,lng]]',
-      parent: body,
-      value: ''
-    });
-    let minz = input.input({
-      id: 'minzoomnewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'minZoom',
-      parent: body,
-      value: 0
-    });
-    let maxz = input.input({
-      id: 'maxzoomnewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'maxZoom',
-      parent: body,
-      value: 10
-    });
-    let base = true;
-    input.checkButton({
-      id: 'basenewlayer',
-      parent: body,
-      text: 'base layer',
-      className: 'cell',
-      active: true,
-      ondeactivate: () => {
-        base = false;
-      },
-      onactivate: () => {
-        base = true;
-      }
-    });
-    (new Modal({
-      title: 'Add a csvTiles',
-      body: body,
-      width: '200px',
-      onsubmit: () => {
-        this.addLayer({
-          name: name.value,
-          type: 'csvTiles',
-          urlTemplate: url.value,
-          options: {
-            tileSize: JSON.parse(tileSize.value || 256) || 256,
-            size: JSON.parse(size.value || 256) || 256,
-            bounds: JSON.parse(size.bounds || "[[-256,0],[0,256]]"),
-            minZoom: minz.value,
-            maxZoom: maxz.value
-          }
-        });
-      }
-    })).show();
-  }
-
-
-  /**
-   * Shows a modal to add a new TileLayer
-   */
-  _modaltilelayer() {
-    let body = util.div('cellconteiner');
-    let name = input.input({
-      id: 'namenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'name',
-      parent: body,
-      value: ''
-    });
-    let url = input.input({
-      id: 'urlnewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'tiles url template',
-      parent: body,
-      value: ''
-    });
-    let tileSize = input.input({
-      id: 'tilesizenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'tileSize',
-      parent: body,
-      value: ''
-    });
-    let minz = input.input({
-      id: 'minzoomnewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'minZoom',
-      parent: body,
-      value: 0
-    });
-    let maxz = input.input({
-      id: 'maxzoomnewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'maxZoom',
-      parent: body,
-      value: 10
-    });
-    let base = true;
-    input.checkButton({
-      id: 'basenewlayer',
-      parent: body,
-      text: 'base layer',
-      className: 'cell',
-      active: true,
-      ondeactivate: (btn) => {
-        base = false;
-        btn.innerHTML = 'overlay';
-      },
-      onactivate: (btn) => {
-        base = true;
-        btn.innerHTML = 'base layer';
-      }
-    });
-    (new Modal({
-      title: 'Add a tileLayer',
-      body: body,
-      width: '200px',
-      onsubmit: () => {
-        this.addLayer({
-          name: name.value,
-          type: 'tileLayer',
-          tilesUrlTemplate: url.value,
-          baseLayer: base,
-          options: {
-            tileSize: JSON.parse(tileSize.value || 256) || 256,
-            minNativeZoom: minz.value,
-            maxNativeZoom: maxz.value,
-            minZoom: minz.value,
-            maxZoom: maxz.value
-          }
-        });
-      }
-    })).show();
-  }
-
-  /**
-   * Show a modal to add a new guide layer
-   */
-  _modalGuideLayer() {
-    let body = util.div('cellconteiner');
-    let name = input.input({
-      id: 'namenewlayer',
-      type: 'text',
-      label: '',
-      className: 'cell',
-      placeholder: 'name',
-      parent: body,
-      value: ''
-    });
-    let size = input.input({
-      id: 'sizenewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'size',
-      parent: body,
-      value: ''
-    });
-    let tilesize = input.input({
-      id: 'tilesizenewlayer',
-      type: 'number',
-      label: '',
-      className: 'cell',
-      placeholder: 'tilesize',
-      parent: body,
-      value: ''
-    });
-
-    (new Modal({
-      title: 'Add a tileLayer',
-      body: body,
-      width: '200px',
-      onsubmit: () => {
-        this.addLayer({
-          name: name.value || 'guide',
-          type: 'guideLayer',
-          size: JSON.parse(size.value) || 256,
-          tileSize: JSON.parse(tilesize.value) || 256
-        });
-      }
-    })).show();
-  }
-
 
 
   /**

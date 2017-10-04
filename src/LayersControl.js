@@ -335,7 +335,8 @@
              } else {
                this._deleteRegionsCheck([{
                  configuration: configuration,
-                 layer: layer
+                 layer: layer,
+                 where: where
                }]);
              }
            }
@@ -368,7 +369,8 @@
              } else {
                this._deleteRegionsCheck([{
                  configuration: configuration,
-                 layer: layer
+                 layer: layer,
+                 where: where
                }]);
              }
            }
@@ -400,7 +402,8 @@
              } else {
                this._deleteRegionsCheck([{
                  configuration: configuration,
-                 layer: layer
+                 layer: layer,
+                 where: where
                }]);
              }
            }
@@ -794,6 +797,7 @@
        type: "text",
        id: `txtLayerName_${configuration._id}_modal`,
        value: configuration.name,
+       className: 'form-control',
        label: ''
      });
      let modal = new Modal({

@@ -31,8 +31,14 @@ const fs = require('fs');
 const {
   util,
   Modal,
-  ButtonsContainer
+  ButtonsContainer,
+  input
 } = require('electrongui');
+
+const {
+  Menu,
+  MenuItem,
+} = require('electron').remote;
 
 
 function loadMap(filename, next) {
@@ -359,7 +365,365 @@ function exportConfiguration(configuration, dir, cl) {
   }
 }
 
+/**
+ * Shows a modal to add a new csvTile layer
+ */
+function modalcsvlayer(cl) {
+  let body = util.div('cellconteiner');
+  let name = input.input({
+    id: 'namenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'name',
+    parent: body,
+    value: ''
+  });
+  let url = input.input({
+    id: 'urlnewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'tiles url template',
+    parent: body,
+    value: '',
+    oncontextmenu: (inp, e) => {
+      let menu = Menu.buildFromTemplate([{
+        label: 'Local file/directory',
+        click: () => {
+          dialog.showOpenDialog({
+            properties: [
+              'openFile',
+              'openDirectories'
+            ]
+          }, (filepaths) => {
+            inp.value = filepaths[0];
+          });
+        }
+      }]);
+      menu.popup();
+    }
+  });
+  let tileSize = input.input({
+    id: 'tilesizenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'tile size',
+    parent: body,
+    value: ''
+  });
+  let size = input.input({
+    id: 'sizenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'size',
+    parent: body,
+    value: ''
+  });
+  let bounds = input.input({
+    id: 'boundsnewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'bounds [[lat,lng],[lat,lng]]',
+    parent: body,
+    value: ''
+  });
+  let minz = input.input({
+    id: 'minzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'minZoom',
+    parent: body,
+    value: 0
+  });
+  let maxz = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxZoom',
+    parent: body,
+    value: 10
+  });
+  let localRS = true;
+  input.checkButton({
+    id: 'localRSnewlayer',
+    parent: body,
+    text: 'localRS',
+    className: 'cell',
+    active: true,
+    ondeactivate: (btn) => {
+      localRS = false;
+    },
+    onactivate: (btn) => {
+      localRS = true;
+    }
+  });
 
+  let grid = true;
+  input.checkButton({
+    id: 'gridnewlayer',
+    parent: body,
+    text: 'grid',
+    className: 'cell',
+    active: true,
+    ondeactivate: (btn) => {
+      grid = false;
+    },
+    onactivate: (btn) => {
+      grid = true;
+    }
+  });
+
+  (new Modal({
+    title: 'Add a csvTiles',
+    body: body,
+    width: '200px',
+    onsubmit: () => {
+      cl({
+        name: name.value,
+        type: 'csvTiles',
+        urlTemplate: url.value,
+        options: {
+          tileSize: JSON.parse(tileSize.value || 256) || 256,
+          size: JSON.parse(size.value || 256) || 256,
+          bounds: JSON.parse(size.bounds || "[[-256,0],[0,256]]"),
+          minZoom: minz.value,
+          maxZoom: maxz.value,
+          localRS: localRS
+        }
+      });
+    }
+  })).show();
+}
+
+
+/**
+ * Shows a modal to add a new TileLayer
+ */
+function modaltilelayer(cl) {
+  let body = util.div('cellconteiner');
+  let attribution = null;
+  let name = input.input({
+    id: 'namenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'name',
+    parent: body,
+    value: ''
+  });
+  let url = input.input({
+    id: 'urlnewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'tiles url template (right click for help)',
+    parent: body,
+    oncontextmenu: (inp, e) => {
+      let menu = Menu.buildFromTemplate([{
+        label: 'Local file/directory',
+        click: () => {
+          dialog.showOpenDialog({
+            properties: [
+              'openFile',
+              'openDirectories'
+            ]
+          }, (filepaths) => {
+            inp.value = filepaths[0];
+          });
+        }
+      }, {
+        label: 'Base layers',
+        submenu: [{
+          label: 'Wikimedia Maps',
+          click: () => {
+            inp.value = 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png'
+            tileSize.value = 256;
+            name.value = name.value || 'Wikimedia Maps',
+              attribution = 'Wikimedia maps | &copy;<a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+          }
+        }, {
+          label: 'OpenStreetMap Standard',
+          click: () => {
+            inp.value = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            tileSize.value = 256;
+            name.value = name.value || 'OpenStreetMap Standard';
+            attribution = '&copy;<a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+          }
+        }]
+      }, {
+        label: 'Overlay',
+        submenu: [{
+          label: 'OpenSkyMap',
+          click: () => {
+            inp.value = 'http://tiles.skimap.org/openskimap/{z}/{x}/{y}.png'
+            tileSize.value = 256;
+            name.value = name.value || ' OpenSkyMap';
+            b.classList.remove('active');
+            b.innerHTML = 'overlay';
+            base = false;
+          }
+        }]
+      }]);
+      menu.popup();
+    },
+    value: ''
+  });
+  let tileSize = input.input({
+    id: 'tilesizenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'tileSize',
+    parent: body,
+    value: ''
+  });
+  let minz = input.input({
+    id: 'minzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'minZoom',
+    parent: body,
+    value: 0
+  });
+  let maxz = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxZoom',
+    parent: body,
+    value: 10
+  });
+  let base = true;
+  let b = input.checkButton({
+    id: 'basenewlayer',
+    parent: body,
+    text: 'base layer',
+    className: 'cell form-control',
+    active: true,
+    ondeactivate: (btn) => {
+      base = false;
+      btn.innerHTML = 'overlay';
+    },
+    onactivate: (btn) => {
+      base = true;
+      btn.innerHTML = 'base layer';
+    }
+  });
+  (new Modal({
+    title: 'Add a tileLayer',
+    body: body,
+    width: '200px',
+    onsubmit: () => {
+      cl({
+        name: name.value,
+        type: 'tileLayer',
+        tilesUrlTemplate: url.value,
+        baseLayer: base,
+        options: {
+          tileSize: JSON.parse(tileSize.value || 256) || 256,
+          minNativeZoom: minz.value,
+          maxNativeZoom: maxz.value,
+          minZoom: minz.value,
+          maxZoom: maxz.value,
+          attribution: attribution,
+        }
+      });
+    }
+  })).show();
+}
+
+/**
+ * Show a modal to add a new guide layer
+ */
+function modalGuideLayer(cl) {
+  let body = util.div('cellconteiner');
+  let name = input.input({
+    id: 'namenewlayer',
+    type: 'text',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'name',
+    parent: body,
+    value: ''
+  });
+  let size = input.input({
+    id: 'sizenewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'size',
+    parent: body,
+    value: ''
+  });
+  let tilesize = input.input({
+    id: 'tilesizenewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'tilesize',
+    parent: body,
+    value: ''
+  });
+
+  (new Modal({
+    title: 'Add a tileLayer',
+    body: body,
+    width: '200px',
+    onsubmit: () => {
+      cl({
+        name: name.value || 'guide',
+        type: 'guideLayer',
+        size: JSON.parse(size.value) || 256,
+        tileSize: JSON.parse(tilesize.value) || 256
+      });
+    }
+  })).show();
+}
+
+
+
+/**
+ * Create new empty map, it shows a modal to select the name
+ */
+function createMap(cl) {
+  let body = util.div();
+  let name = input.input({
+    id: 'newmapname-modal',
+    parent: body,
+    value: '',
+    autofocus: true,
+    label: '',
+    className: 'form-control',
+    width: '100%',
+    placeholder: 'new map name',
+    title: 'new map name',
+    type: 'text'
+  });
+  let modal = new Modal({
+    title: 'choose a name for the new map',
+    width: 'auto',
+    height: 'auto',
+    parent: gui.extensions.MapExtension,
+    onsubmit: () => {
+      let conf = baseConfiguration();
+      conf.name = name.value;
+      cl(conf);
+    },
+    oncancel: () => {}
+  });
+
+  modal.addBody(body);
+  modal.show();
+
+}
 
 
 
@@ -373,3 +737,9 @@ exports.loadMap = loadMap;
 exports.loadMapFile = loadMapfromFile;
 exports.baseConfiguration = baseConfiguration;
 exports.basePath = basePath;
+exports.modal = {
+  guideLayer: modalGuideLayer,
+  tileLayer: modaltilelayer,
+  csvTiles: modalcsvlayer,
+  createMap: createMap
+}

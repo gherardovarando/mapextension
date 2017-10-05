@@ -53,7 +53,7 @@ const geometryutil = require('leaflet-geometryutil');
 const leafletDraw = require('leaflet-draw');
 require('leaflet-multilevel');
 const snap = require(`leaflet-snap`);
-const mapBuilder = require('leaflet-map-builder');
+const builder = require('leaflet-map-builder');
 const isDev = require('electron-is-dev');
 const {
   ipcRenderer
@@ -73,7 +73,15 @@ const CRSs = {
   EPSG4326: L.CRS.EPSG4326
 };
 const layerTypes = ['tileLayer', 'tileLayerWMS', 'imageOverlay', 'guideLayer', 'csvTiles', 'featureGroup', 'layerGroup'];
-const drawObjects = ['marker', 'polygon', 'rectangle', 'polyline', 'circle'];
+const drawObjects = ['marker', 'polygon', 'rectangle', 'polyline', 'circle', 'circlemarker'];
+const drawIcons = {
+  marker: 'fa fa-map-pin',
+  circle: 'fa fa-circle-o',
+  rectangle: 'fa fa-square-o',
+  polyline: '',
+  polygon: '',
+  circleMarker: ''
+}
 
 
 /**
@@ -107,8 +115,8 @@ class MapExtension extends GuiExtension {
       }, {
         label: 'Reload map',
         click: () => {
-          if (this.mapBuilder instanceof L.MapBuilder) {
-            this.mapBuilder.reload();
+          if (this.builder instanceof L.MapBuilder) {
+            this.builder.reload();
           }
         }
       }, {
@@ -130,7 +138,7 @@ class MapExtension extends GuiExtension {
       }, {
         label: 'Export map',
         click: () => {
-          mapio.saveAs(this.mapBuilder.getConfiguration(), (c, p, e) => {
+          mapio.saveAs(this.builder.getConfiguration(), (c, p, e) => {
             gui.notify(`${c.name} map saved in ${p}`);
           }, (err) => {
             gui.notify(err);
@@ -187,7 +195,7 @@ class MapExtension extends GuiExtension {
       }, {
         label: "Settings",
         click: () => {
-          this._setSettings();
+          this._settingsModal();
         }
       }]
     });
@@ -198,12 +206,54 @@ class MapExtension extends GuiExtension {
       zoomControl: false,
       tooltip: true,
       popup: true,
-      multilevel: true,
-      levelControl: true,
-      zoomSnap: 1,
-      zoomDelta: 1,
       expert: isDev,
-      drawingColor: "#ed8414"
+    }
+    this._options = {
+      map: {
+        zoomSnap: 1,
+        zoomDelta: 1,
+        crs: CRSs['simple'],
+        zoomControl: false,
+        multilevel: true,
+        levelControl: true
+      },
+      builder: {
+        dev: true,
+        controls: {
+          draw: {
+            position: 'bottomleft',
+            draw: {
+              polyline: false,
+              marker: {},
+              circlemarker: false,
+              polygon: {
+                allowIntersection: false
+              },
+              rectangle: true,
+              circle: {}
+            },
+            edit: {
+              allowIntersection: false
+            }
+          },
+          zoom: false,
+          layers: () => {}
+        },
+        tooltip: {
+          polygon: true,
+          rectangle: true,
+          marker: true,
+          circle: true,
+          circlemarker: true
+        },
+        popup: {
+          marker: false,
+          polygon: false,
+          rectangle: false,
+          circle: true,
+          circlemarker: true
+        }
+      }
     }
     this.maps = {};
     this.activeConfiguration = null;
@@ -234,85 +284,7 @@ class MapExtension extends GuiExtension {
       className: 'pane-sm scrollable'
     });
     this.sidebar.flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
-    this.layersControl = new LayersControl(this.mapBuilder);
-    let zc;
-    if (this._settings.zoomControl) {
-      zc = {
-        position: 'topright'
-      };
-    } else {
-      zc = false;
-    }
-
-    let options = {
-      map: {
-        zoomSnap: this._settings.zoomSnap,
-        zoomDelta: this._settings.zoomDelta,
-        crs: CRSs[this._settings.crs],
-        zoomControl: this._settings.zoomControl,
-        multilevel: this._settings.multilevel,
-        levelControl: this._settings.levelControl
-      },
-      builder: {
-        dev: true,
-        controls: {
-          draw: {
-            position: 'bottomleft',
-            draw: {
-              polyline: false,
-              marker: true,
-              circleMarker: false,
-              polygon: {
-                allowIntersection: false,
-                snapDistance: 5,
-                shapeOptions: {
-                  stroke: true,
-                  color: this._settings.drawingColor,
-                  weight: 4,
-                  opacity: 1,
-                  fill: true,
-                  fillColor: null, //same as color by default
-                  fillOpacity: 0.5,
-                  clickable: true
-                }
-              },
-              rectangle: {
-                shapeOptions: {
-                  stroke: true,
-                  color: this._settings.drawingColor,
-                  weight: 4,
-                  opacity: 1,
-                  fill: true,
-                  fillColor: null, //same as color by default
-                  fillOpacity: 0.5,
-                  clickable: true
-                }
-              },
-              circle: true
-            },
-            edit: {
-              allowIntersection: false
-            }
-          },
-          zoom: zc,
-          layers: (layer, configuration, where) => {
-            this.layersControl.addLayer(layer, configuration, where);
-          }
-        },
-        tooltip: {
-          polygon: this._settings.tooltip,
-          rectangle: this._settings.tooltip,
-          marker: this._settings.tooltip
-        },
-        popup: {
-          marker: this._settings.popup,
-          polygon: this._settings.popup,
-          rectangle: this._settings.popup
-        }
-      }
-    }
     this.sidebar.show();
-    this.sidebar.flexLayout.appendToLastContainer(this.layersControl.layersWidget.element);
 
     this.mapsList = new ListGroup('mapslist');
     this.mapsList.addSearch({
@@ -366,14 +338,25 @@ class MapExtension extends GuiExtension {
     };
     this.appendChild(this.mapPane);
     this.mapPane.show();
-    let mapCont = document.createElement('DIV');
-    mapCont.style.width = '100%';
-    mapCont.style.height = '100%';
-    mapCont.style['z-index'] = 0;
-    mapCont.id = options.id || 'map';
-    this.mapPane.top.appendChild(mapCont);
-    let map = L.map(options.id || 'map', options.map); //define map object
-    this.map = map;
+    this.builder = new L.MapBuilder(); //initialize the map builder
+    this._setMap();
+
+    this.builder.on('set:configuration', (e) => {
+      this.activeConfiguration = e.configuration;
+    });
+    this.builder.on('clear', () => {
+      this._isLoaded = false;
+      this.configEditor.set({});
+    });
+    this.builder.on('reload', () => {
+      this._isLoaded = true;
+      this.configEditor.set(this.activeConfiguration);
+      gui.viewTrick();
+    });
+
+    this.layersControl = new LayersControl();
+    this.layersControl.setBuilder(this.builder); //link the layerscontrol to the builder
+
 
     let configDisplay = util.div('');
     configDisplay.style.width = '100%';
@@ -411,50 +394,41 @@ class MapExtension extends GuiExtension {
       if (e.key == 'Enter' && e.ctrlKey) {
         let conf = this.configEditor.get();
         Object.assign(this.maps[this.activeConfiguration._id], conf);
-        this.mapBuilder.setConfiguration(this.maps[this.activeConfiguration._id]);
+        this.builder.setConfiguration(this.maps[this.activeConfiguration._id]);
       }
     });
     this.mapPane.bottom.appendChild(configDisplay);
 
-    this.mapBuilder = new L.MapBuilder(map, options.builder); //initialize the map builder
-    this.mapBuilder.on('set:configuration', (e) => {
-      this.activeConfiguration = e.configuration;
-    });
-    this.mapBuilder.on('clear', () => {
-      this._isLoaded = false;
-    });
-    this.mapBuilder.on('reload', () => {
-      this._isLoaded = true;
-      this.configEditor.set(this.activeConfiguration);
 
-    });
-    this.layersControl.setBuilder(this.mapBuilder); //link the layerscontrol to the mapBuilder
+
 
     this.sidebarOverlay = new Sidebar(this.element, {
       className: 'pane-sm scrollable'
     });
     this.sidebarOverlay.show();
 
-    this.sidebarOverlayTabGroup = new TabGroup(this.sidebarOverlay);
-    this.sidebarOverlayTabGroup.addItem({
+    let sidebarOverlayTabGroup = new TabGroup(this.sidebarOverlay);
+    sidebarOverlayTabGroup.addItem({
       id: `regions`,
       name: `Regions`
     });
-    this.sidebarOverlayTabGroup.addItem({
+    sidebarOverlayTabGroup.addItem({
       id: `markers`,
       name: `Markers`
     });
 
-    this.sidebarOverlayTabGroup.addClickListener(`regions`, () => {
+    sidebarOverlayTabGroup.addClickListener(`regions`, () => {
       this.layersControl.regionsWidget.show();
       this.layersControl.markersWidget.hide();
     });
-    this.sidebarOverlayTabGroup.addClickListener(`markers`, () => {
+    sidebarOverlayTabGroup.addClickListener(`markers`, () => {
       this.layersControl.markersWidget.show();
       this.layersControl.regionsWidget.hide();
     });
+
     this.sidebarOverlay.addList(this.layersControl.regionsWidget);
     this.sidebarOverlay.addList(this.layersControl.markersWidget);
+    this.sidebar.flexLayout.appendToLastContainer(this.layersControl.layersWidget.element);
 
     /**
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
@@ -463,7 +437,7 @@ class MapExtension extends GuiExtension {
       gui.workspace.addSpace(this, this.maps);
       gui.workspace.on('load', () => {
         gui.notify('loading maps from workspace...');
-        this.mapBuilder.clear();
+        this.builder.clear();
         this.mapsList.clean();
         this.maps = {};
         let maps = gui.workspace.getSpace(this) || {};
@@ -478,7 +452,7 @@ class MapExtension extends GuiExtension {
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of mapPage
       if (gui.workspace.spaces.MapExtension) {
-        this.mapBuilder.clear();
+        this.builder.clear();
         this.mapsList.clean();
         this.maps = {};
         let maps = gui.workspace.getSpace(this);
@@ -497,72 +471,172 @@ class MapExtension extends GuiExtension {
    * deactivate the extension
    */
   deactivate() { /// the extension has to take care of removing all the buttons and element appended outside of the main extension pane
-    this.mapBuilder.map.off(); //unbind all events
+    this.builder.map.off(); //unbind all events
     this.removeToggleButton(this.constructor.name); //this is compulsory to leave the interface clean
     super.deactivate(); //we will also call the super class deactivate method
   }
 
+
+  _setMap() {
+    this.mapPane.top.clear();
+    if (this.map) this.map.off();
+    let mapCont = document.createElement('DIV');
+    mapCont.style.width = '100%';
+    mapCont.style.height = '100%';
+    mapCont.style['z-index'] = 0;
+    mapCont.id = this._options.map.id || 'map';
+    this.mapPane.top.appendChild(mapCont);
+    let map = L.map(this._options.map.id || 'map', this._options.map); //define map object
+
+    this.map = map;
+    this.builder.setMap(this.map);
+    this.builder.setOptions(this._options.builder);
+  }
+
+
   /**
    * Show a modal with the setting relatives to the extension
    */
-  _setSettings() {
-    let newSet = util.clone(this._settings);
-    let needExtRel = false;
+  _settingsModal() {
+    let mR = false;
+    let bR = false;
     let modal = new Modal({
       title: ``,
-      width: '600px',
+      width: '400px',
       height: 'auto',
       noCloseIcon: true,
       parent: this,
       onsubmit: () => {
-        if (needExtRel) {
-          this.deactivate();
-          this.activate();
-          this.show();
+        if (mR) {
+          this._setMap();
+        } else if (bR) {
+          this.builder.setOptions(this._options.builder);
         }
       },
       oncancel: () => {
-        if (needExtRel) {
-          this.deactivate();
-          this.activate();
-          this.show();
+        if (mR) {
+          this._setMap();
+        } else if (bR) {
+          this.builder.setOptions(this._options.builder);
         }
       }
     });
-    let body = document.createElement('DIV');
-    body.className = 'cellconteiner';
-
-    let Kinterface = util.div('cell');
-    Kinterface.style.width = '45%';
-    body.appendChild(Kinterface);
-    let tinterface = document.createElement('H4');
-    tinterface.innerHTML = 'Interface';
-    Kinterface.appendChild(tinterface);
-    let cinterface = util.div('cellconteiner');
-    Kinterface.appendChild(cinterface);
-
-    let Kmap = util.div('cell');
-    Kmap.style.width = '45%';
-    body.appendChild(Kmap);
-    let tmap = document.createElement('H4');
-    tmap.innerHTML = 'Map';
-    Kmap.appendChild(tmap);
-    let cmap = util.div('cellconteiner');
-    Kmap.appendChild(cmap);
-
-    input.input({
-      parent: cinterface,
-      className: 'cell',
-      type: 'color',
-      label: 'Drawing color',
-      value: this._settings.drawingColor,
-      oninput: (inp) => {
-        this._settings.drawingColor = inp.value;
-        needExtRel= true;
+    let body = util.div('pane-group pane');
+    let sid = new Sidebar(body, {
+      className: 'pane-sm'
+    });
+    sid.addList();
+    sid.addItem({
+      id: 'map',
+      title: 'Map ',
+      icon: 'fa fa-map-o',
+      toggle: true,
+      active: true,
+      onclick: {
+        deactive: () => {
+          sid.list.activeItem('map');
+        },
+        active: () => {
+          hideA();
+          sid.list.deactiveAll();
+          cmap.show();
+        }
       }
     });
+    sid.addItem({
+      id: 'interface',
+      title: 'Interface',
+      icon: 'fa fa-hand-pointer-o',
+      toggle: true,
+      onclick: {
+        deactive: () => {
+          sid.list.activeItem('interface');
+        },
+        active:
+          () => {
+            hideA();
+            sid.list.deactiveAll();
+            cinterface.show();
+          }
+      }
+    });
+    sid.addItem({
+      id: 'popup',
+      title: 'popup',
+      icon: 'fa fa-comment-o',
+      toggle: true,
+      onclick: {
+        deactive: () => {
+          sid.list.activeItem('popup');
+        },
+        active:
+          () => {
+            hideA();
+            sid.list.deactiveAll();
+            cpopup.show();
+          }
+      }
+    });
+    sid.addItem({
+      id: 'tooltip',
+      title: 'tooltip',
+      icon: 'fa fa-tag',
+      toggle: true,
+      onclick: {
+        deactive: () => {
+          sid.list.activeItem('tooltip');
+        },
+        active:
+          () => {
+            hideA();
+            sid.list.deactiveAll();
+            ctooltip.show();
+          }
+      }
+    });
+    sid.addItem({
+      id: 'draw',
+      title: 'draw',
+      icon: 'fa fa-pencil',
+      toggle: true,
+      onclick: {
+        deactive: () => {
+          sid.list.activeItem('draw');
+        },
+        active:
+          () => {
+            hideA();
+            sid.list.deactiveAll();
+            cdraw.show();
+          }
+      }
+    });
+    sid.show();
+
+    let cpopup = new ToggleElement(util.div('pane padded'));
+    let ctooltip = new ToggleElement(util.div('pane padded'));
+    let cinterface = new ToggleElement(util.div('pane padded'));
+    let cmap = new ToggleElement(util.div('pane padded'));
+    let cdraw = new ToggleElement(util.div('pane padded'));
+    let hideA = () => {
+      cinterface.hide();
+      cpopup.hide();
+      ctooltip.hide();
+      cinterface.appendTo(body);
+      cmap.hide();
+      cdraw.hide();
+    }
+
+    hideA();
+    cpopup.appendTo(body);
+    ctooltip.appendTo(body);
+    cinterface.appendTo(body);
+    cmap.appendTo(body);
+    cdraw.appendTo(body);
+    cmap.show();
 
     input.checkButton({
+      makeContainer: true,
       parent: cinterface,
       autofocus: true, //needed to use esc and enter modal commands
       className: 'cell',
@@ -577,9 +651,10 @@ class MapExtension extends GuiExtension {
       }
     });
     input.checkButton({
+      makeContainer: true,
       parent: cinterface,
       autofocus: true, //needed to use esc and enter modal commands
-      className: 'cell',
+      className: '',
       active: this._settings.multiRegionSelect,
       text: "Region multi select",
       onactivate: () => {
@@ -590,6 +665,7 @@ class MapExtension extends GuiExtension {
       }
     });
     input.checkButton({
+      makeContainer: true,
       parent: cinterface,
       className: 'cell',
       active: this._settings.multiMarkerSelect,
@@ -601,72 +677,134 @@ class MapExtension extends GuiExtension {
         this._settings.multiMarkerSelect = false;
       }
     });
+
+
+    drawObjects.map((k) => {
+      input.checkButton({
+        makeContainer: true,
+        parent: cdraw,
+        className: 'cell',
+        text: k,
+        active: this._options.builder.controls.draw.draw[k],
+        onactivate: () => {
+          this._options.builder.controls.draw.draw[k] = {
+            allowIntersection: this._options.builder.controls.draw.edit.allowIntersection,
+            snapDistance: 5,
+            showArea: false,
+            shapeOptions: {}
+          };
+          bR = true;
+        },
+        ondeactivate: () => {
+          this._options.builder.controls.draw.draw[k] = false;
+          bR = true;
+        }
+      });
+    });
+
+    input.checkButton({
+      makeContainer: true,
+      parent: cdraw,
+      className: 'cell',
+      text: 'allowIntersection',
+      active: this._options.builder.controls.draw.edit.allowIntersection,
+      onactivate: () => {
+        this._options.builder.controls.draw.edit.allowIntersection = true;
+        if (this._options.builder.controls.draw.draw.polygon) {
+          this._options.builder.controls.draw.draw.polygon.allowIntersection = true;
+        }
+        bR = true;
+      },
+      ondeactivate: () => {
+        this._options.builder.controls.draw.edit.allowIntersection = false;
+        if (this._options.builder.controls.draw.draw.polygon) {
+          this._options.builder.controls.draw.draw.polygon.allowIntersection = false;
+        }
+        bR = true;
+      }
+    });
+
+
+
     input.selectInput({
       parent: cmap,
       className: 'form-control cell',
       label: 'CRS',
       choices: Object.keys(CRSs),
-      value: this._settings.crs,
+      value: this._options.crs || 'simple',
       oninput: (inp) => {
-        this._settings.crs = inp.value;
-        needExtRel = true;
+        this._options.crs = inp.value;
+        this._options.map.crs = CRSs[inp.value];
+        mR = true;
       }
     });
     input.checkButton({
+      makeContainer: true,
       parent: cmap,
       className: 'cell',
       active: this._settings.zoomControl,
       text: "Zoom control",
       onactivate: () => {
-        this._settings.zoomControl = true;
-        needExtRel = true;
+        this._options.map.zoomControl = true;
+        mR = true;
       },
       ondeactivate: () => {
-        this._settings.zoomControl = false;
-        needExtRel = true;
+        this._options.map.zoomControl = false;
+        mR = true;
       }
     });
     input.checkButton({
+      makeContainer: true,
       parent: cmap,
       className: 'cell',
-      active: this._settings.multilevel,
+      active: this._options.map.multilevel,
       text: "Multi level",
       onactivate: () => {
-        this._settings.multilevel = true;
-        needExtRel = true;
+        this._options.map.multilevel = true;
+        mR = true;
       },
       ondeactivate: () => {
-        this._settings.multilevel = false;
-        needExtRel = true;
+        this._options.map.multilevel = false;
+        mR = true;
       }
     });
-    input.checkButton({
-      parent: cmap,
-      className: 'cell',
-      active: this._settings.tooltip,
-      text: "Tooltip",
-      onactivate: () => {
-        this._settings.tooltip = true;
-        needExtRel = true;
-      },
-      ondeactivate: () => {
-        this._settings.tooltip = false;
-        needExtRel = true;
-      }
-    });
-    input.checkButton({
-      parent: cmap,
-      className: 'cell',
-      active: this._settings.popup,
-      text: "Popup",
-      onactivate: () => {
-        this._settings.popup = true;
-        needExtRel = true;
-      },
-      ondeactivate: () => {
-        this._settings.popup = false;
-        needExtRel = true;
-      }
+
+
+
+    drawObjects.map((k) => {
+      input.checkButton({
+        makeContainer: true,
+        parent: cpopup,
+        className: 'cell',
+        active: this._options.builder.popup[k],
+        text: k+ ' ',
+        icon: drawIcons[k],
+        onactivate: () => {
+          this._options.builder.popup[k] = true;
+          bR = true;
+        },
+        ondeactivate: () => {
+          this._options.builder.popup[k] = false;
+          bR = true;
+        }
+      });
+
+      input.checkButton({
+        makeContainer: true,
+        parent: ctooltip,
+        className: 'cell',
+        active: this._options.builder.tooltip[k],
+        text: k+ ' ',
+        icon:  drawIcons[k],
+        onactivate: () => {
+          this._options.builder.tooltip[k] = true;
+          bR = true;
+        },
+        ondeactivate: () => {
+          this._options.builder.tooltip[k] = false;
+          bR = true;
+        }
+      });
     });
 
     modal.addBody(body);
@@ -680,8 +818,8 @@ class MapExtension extends GuiExtension {
    */
   addNewMap(configuration) {
     configuration._id = this._indx++;
-    try { //try to set the mapBuilder to the configuration
-      this.mapBuilder.setConfiguration(configuration);
+    try { //try to set the builder to the configuration
+      this.builder.setConfiguration(configuration);
     } catch (e) {
       // otherwise means that the builder is unable to load the map
       gui.notify(e);
@@ -729,8 +867,8 @@ class MapExtension extends GuiExtension {
         }, (id) => {
           if (id > 0) {
             if (this.activeConfiguration._id == configuration._id) {
-              this.mapBuilder.clear();
-              this.mapBuilder.setConfiguration({
+              this.builder.clear();
+              this.builder.setConfiguration({
                 type: 'map'
               });
             }
@@ -760,12 +898,12 @@ class MapExtension extends GuiExtension {
           this.mapsList.deactiveAll();
           //this.mapsList.hideAllDetails();
           //this.mapsList.showDetails(configuration._id);
-          this.mapBuilder.setConfiguration(configuration);
+          this.builder.setConfiguration(configuration);
           gui.viewTrick();
         },
         deactive: () => {
           //this.mapsList.hideAllDetails();
-          this.mapBuilder.clear();
+          this.builder.clear();
         }
       }
     });
@@ -807,7 +945,7 @@ class MapExtension extends GuiExtension {
             title: 'Add Layer?',
             type: 'warning',
             buttons: ['No', "Yes"],
-            message: `Add layer from  ${filenames[0]} to map ${this.mapBuilder._configuration.name} ?`,
+            message: `Add layer from  ${filenames[0]} to map ${this.builder._configuration.name} ?`,
             noLink: true
           }, (id) => {
             if (id > 0) {
@@ -858,8 +996,8 @@ class MapExtension extends GuiExtension {
       //     type: 'pointsLayer',
       //     tiles_format: 'csv',
       //     pointsUrlTemplate: path,
-      //     tileSize: this.mapBuilder.getSize() || 256,
-      //     size: this.mapBuilder.getSize() || 256,
+      //     tileSize: this.builder.getSize() || 256,
+      //     size: this.builder.getSize() || 256,
       //     maxNativeZoom: 0,
       //     maxZoom: 8
       // });
@@ -906,7 +1044,7 @@ class MapExtension extends GuiExtension {
    */
   addLayer(conf) {
     conf = mapio.parseLayer(conf);
-    this.mapBuilder.loadLayer(conf);
+    this.builder.loadLayer(conf);
     this.activeConfiguration.layers[`layer_${conf._id}`] = conf;
   }
 

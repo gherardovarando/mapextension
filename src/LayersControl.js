@@ -156,6 +156,10 @@
        //gui.viewTrick();
      });
 
+     this.builder.on('load:layer', (e) => {
+       this.addLayer(e.layer, e.configuration, e.where);
+     });
+
 
      this.builder.on('add:drawnitems', (e) => {
        this.builder._configuration.layers.drawnItems = e.configuration;
@@ -308,7 +312,7 @@
                if ((typeof configuration.role === 'string') && configuration.role.includes('guide')) {
                  configuration.role = configuration.role.replace(/guide/g, '');
                } else if (typeof configuration.role === 'string') {
-                 configuration.role = configuration.role + ' guide';
+                 configuration.role = configuration.role + 'guide';
                } else {
                  configuration.role = 'guide';
                }
@@ -454,7 +458,7 @@
            }
          }));
          break;
-       case 'circleMarker':
+       case 'circlemarker':
          list = this.markersWidget;
          where.addLayer(layer);
          customMenuItems.push(new MenuItem({
@@ -493,14 +497,14 @@
      this._addToList(layer, configuration, where, customMenuItems, tools, list);
      if (typeof layer.on === 'function') {
        layer.on('remove', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circleMarker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.deactiveItem(`${e.target._id}`);
        });
 
        layer.on('add', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circleMarker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.activeItem(`${e.target._id}`);
@@ -540,10 +544,6 @@
        }
      }
 
-     //  let titleTable = util.div('table-container');
-     //  let txtTitleContainer = util.div('cell full-width');
-     //  txtTitleContainer.appendChild(txtTitle);
-     //  titleTable.appendChild(txtTitleContainer);
      let context = new Menu();
      context.append(new MenuItem({
        label: 'Search',
@@ -569,7 +569,7 @@
      customMenuItems.map((menuItem) => {
        context.append(menuItem);
      });
-     layer.on('contextmenu', () => {
+     layer.on('contextmenu', (e) => {
        context.popup();
      });
      list.addItem({

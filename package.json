@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/gherardovarando/mapextension#readme",
   "dependencies": {
-    "electrongui": "github:gherardovarando/electrongui",
+    "electrongui": "",
     "jsoneditor": "^5.9.3",
     "leaflet": "^1.2.0",
     "leaflet-csvtiles": "",

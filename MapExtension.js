@@ -33,11 +33,9 @@ const {
   ButtonsContainer,
   util,
   input,
-  FlexLayout,
-  gui
+  FlexLayout
 } = require('electrongui');
 const sizeOf = require('image-size');
-const RegionAnalyzer = require('./src/RegionAnalyzer.js');
 const ConvertTiff = require('tiff-to-png');
 const json2csv = require('json2csv');
 const fs = require('fs');
@@ -93,8 +91,8 @@ class MapExtension extends GuiExtension {
    * Creates an instance of the extension.
    * A menu with all capabilities is defined.
    */
-  constructor() {
-    super({
+  constructor(gui) {
+    super(gui,{
       icon: icon,
       author: 'gherardo varando (gherardo.varando@gmail.com)',
       menuLabel: 'Maps',
@@ -139,9 +137,9 @@ class MapExtension extends GuiExtension {
         label: 'Export map',
         click: () => {
           mapio.saveAs(this.builder.getConfiguration(), (c, p, e) => {
-            gui.notify(`${c.name} map saved in ${p}`);
+            this.gui.notify(`${c.name} map saved in ${p}`);
           }, (err) => {
-            gui.notify(err);
+            this.gui.notify(err);
           });
         },
       }, {
@@ -153,7 +151,7 @@ class MapExtension extends GuiExtension {
           label: 'File',
           click: () => {
             if (!this._isLoaded) {
-              gui.notify('First load or create a map');
+              this.gui.notify('First load or create a map');
               return;
             }
             this.openLayerFile();
@@ -162,7 +160,7 @@ class MapExtension extends GuiExtension {
           label: 'Tiles Url',
           click: () => {
             if (!this._isLoaded) {
-              gui.notify('First load or create a map');
+              this.gui.notify('First load or create a map');
               return;
             }
             mapio.modal.tileLayer((conf) => {
@@ -173,7 +171,7 @@ class MapExtension extends GuiExtension {
           label: 'CsvTiles ',
           click: () => {
             if (!this._isLoaded) {
-              gui.notify('First load or create a map');
+              this.gui.notify('First load or create a map');
               return;
             }
             mapio.modal.csvTiles((conf) => {
@@ -184,7 +182,7 @@ class MapExtension extends GuiExtension {
           label: 'Guide',
           click: () => {
             if (!this._isLoaded) {
-              gui.notify('First load or create a map');
+              this.gui.notify('First load or create a map');
               return;
             }
             mapio.modal.guideLayer((conf) => {
@@ -265,17 +263,18 @@ class MapExtension extends GuiExtension {
    */
   show() {
     super.show();
-    gui.viewTrick();
+    this.gui.viewTrick();
   }
 
   /**
    * Activates the extension.
    */
   activate() {
+    super.activate();
     this.appendMenu();
     this.addToggleButton({
       id: this.constructor.name,
-      buttonsContainer: gui.header.actionsContainer,
+      buttonsContainer: this.gui.header.actionsContainer,
       icon: icon,
       groupId: this.constructor.name
     });
@@ -351,10 +350,10 @@ class MapExtension extends GuiExtension {
     this.builder.on('reload', () => {
       this._isLoaded = true;
       this.configEditor.set(this.activeConfiguration);
-      gui.viewTrick();
+      this.gui.viewTrick();
     });
 
-    this.layersControl = new LayersControl();
+    this.layersControl = new LayersControl(this.gui);
     this.layersControl.setBuilder(this.builder); //link the layerscontrol to the builder
 
 
@@ -433,37 +432,36 @@ class MapExtension extends GuiExtension {
     /**
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
      */
-    if (gui.workspace instanceof Workspace) {
-      gui.workspace.addSpace(this, this.maps);
-      gui.workspace.on('load', () => {
-        gui.notify('loading maps from workspace...');
+    if (this.gui.workspace instanceof Workspace) {
+      this.gui.workspace.addSpace(this, this.maps);
+      this.gui.workspace.on('load', () => {
+        this.gui.notify('loading maps from workspace...');
         this.builder.clear();
         this.mapsList.clean();
         this.maps = {};
-        let maps = gui.workspace.getSpace(this) || {};
+        let maps = this.gui.workspace.getSpace(this) || {};
         let tot = 0;
         Object.keys(maps).map((id, i) => {
           this.addNewMap(mapio.parseMap(maps[id]));
           tot++;
         });
-        gui.workspace.addSpace(this, this.maps, true); //overwriting
-        gui.notify(`${tot} maps from workspace loaded`);
+        this.gui.workspace.addSpace(this, this.maps, true); //overwriting
+        this.gui.notify(`${tot} maps from workspace loaded`);
       });
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of mapPage
-      if (gui.workspace.spaces.MapExtension) {
+      if (this.gui.workspace.spaces.MapExtension) {
         this.builder.clear();
         this.mapsList.clean();
         this.maps = {};
-        let maps = gui.workspace.getSpace(this);
+        let maps = this.gui.workspace.getSpace(this);
         Object.keys(maps).map((id) => {
           this.addNewMap(mapio.parseMap(maps[id]));
         });
-        gui.workspace.addSpace(this, this.maps, true); //overwriting
+        this.gui.workspace.addSpace(this, this.maps, true); //overwriting
       }
 
     }
-    super.activate();
 
   } //end activate
 
@@ -822,7 +820,7 @@ class MapExtension extends GuiExtension {
       this.builder.setConfiguration(configuration);
     } catch (e) {
       // otherwise means that the builder is unable to load the map
-      gui.notify(e);
+      this.gui.notify(e);
       return;
     }
     let body = new ToggleElement(document.createElement('DIV'));
@@ -848,9 +846,9 @@ class MapExtension extends GuiExtension {
       type: 'normal',
       click: () => {
         mapio.saveAs(this.maps[configuration._id], (c, p, e) => {
-          gui.notify(`${c.name} map saved in ${p}`);
+          this.gui.notify(`${c.name} map saved in ${p}`);
         }, (err) => {
-          gui.notify(err);
+          this.gui.notify(err);
         });
       }
     }));
@@ -899,7 +897,7 @@ class MapExtension extends GuiExtension {
           //this.mapsList.hideAllDetails();
           //this.mapsList.showDetails(configuration._id);
           this.builder.setConfiguration(configuration);
-          gui.viewTrick();
+          this.gui.viewTrick();
         },
         deactive: () => {
           //this.mapsList.hideAllDetails();
@@ -1029,10 +1027,10 @@ class MapExtension extends GuiExtension {
           baseLayer: true,
           author: 'unknow'
         });
-        gui.notify(`${path} added`);
+        this.gui.notify(`${path} added`);
         util.notifyOS(`"${path} added"`);
       }
-      gui.notify(`${path} started conversion`);
+      this.gui.notify(`${path} started conversion`);
       converter.convertArray([path], mapio.basePath(null, path));
     }
   }

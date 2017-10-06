@@ -28,7 +28,6 @@
    ToggleElement,
    ButtonsContainer,
    Modal,
-   gui,
    colors
  } = require('electrongui');
  const {
@@ -47,7 +46,9 @@
    /**
     * Class constructor.
     */
-   constructor() {
+   constructor(gui) {
+
+     this.gui = gui;
 
      //create layers-widget
      this.layersWidget = new ToggleElement(util.div('layers-widget'));
@@ -139,7 +140,7 @@
      });
 
      this.builder.on('error', (e) => {
-       gui.notify(e.error);
+       this.gui.notify(e.error);
      });
 
      this.builder.on('load:control', (e) => {
@@ -153,7 +154,6 @@
        this.regionsWidget.clean();
        this.markersWidget.clean();
        this.selectedRegions = [];
-       //gui.viewTrick();
      });
 
      this.builder.on('load:layer', (e) => {
@@ -163,7 +163,7 @@
 
      this.builder.on('add:drawnitems', (e) => {
        this.builder._configuration.layers.drawnItems = e.configuration;
-       gui.viewTrick();
+       this.gui.viewTrick();
      });
 
      this.builder.on('a')
@@ -294,7 +294,7 @@
            label: 'Delete',
            click: () => {
              if (configuration.role && configuration.role.includes('drawnItems')) {
-               gui.notify('You dont want to remove the drawnItems layer...');
+               this.gui.notify('You dont want to remove the drawnItems layer...');
                return;
              }
              this.overlaylist.removeItem(`${configuration._id}`);
@@ -510,7 +510,7 @@
          list.activeItem(`${e.target._id}`);
        });
      }
-     gui.viewTrick();
+     this.gui.viewTrick();
    }
 
 
@@ -591,7 +591,7 @@
              layer.setStyle({
                fillOpacity: 1
              });
-             gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
+             this.gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.push({
                configuration: configuration,
@@ -603,7 +603,7 @@
                  fillOpacity: 1
                });
              }
-             gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
+             this.gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (configuration.baseLayer) {
                where.removeLayer(this.baseLayer);
@@ -622,7 +622,7 @@
                layer: layer,
                where: where
              }), 1);
-             gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
+             this.gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
              layer.setStyle({
                fillOpacity: configuration.options.fillOpacity || 0.3
              });
@@ -637,7 +637,7 @@
                  fillOpacity: configuration.options.fillOpacity || 0.3
                });
              }
-             gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
+             this.gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (!configuration.baseLayer) {
                where.removeLayer(layer);
@@ -829,7 +829,7 @@
        title: `rename ${configuration.type}`,
        height: 'auto',
        body: txtLayerName,
-       parent: gui.extensions.MapExtension,
+       parent: this.gui.extensions.MapExtension,
        onsubmit: () => {
          configuration.name = txtLayerName.value;
          list.setTitle(configuration._id, configuration.name);

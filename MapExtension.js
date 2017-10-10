@@ -276,7 +276,8 @@ class MapExtension extends GuiExtension {
       id: this.constructor.name,
       buttonsContainer: this.gui.header.actionsContainer,
       icon: icon,
-      groupId: this.constructor.name
+      groupId: this.constructor.name,
+      title: 'Maps'
     });
     //add the sidebars
     this.sidebar = new Sidebar(this.element, {

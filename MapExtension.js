@@ -32,8 +32,7 @@ const {
   GuiExtension,
   ButtonsContainer,
   util,
-  input,
-  FlexLayout
+  input
 } = require('electrongui');
 const sizeOf = require('image-size');
 const ConvertTiff = require('tiff-to-png');
@@ -106,7 +105,7 @@ class MapExtension extends GuiExtension {
           if (!this._settings.expert) {
             dialog.showErrorBox('You are no expert', 'You should enable expert mode in Maps->settings');
           } else {
-            this.mapPane.toggleBottom();
+            this.mapPane.toggleSecondPane();
           }
         },
         accelerator: 'CommandOrControl + P'
@@ -283,7 +282,7 @@ class MapExtension extends GuiExtension {
     this.sidebar = new Sidebar(this.element, {
       className: 'pane-sm scrollable'
     });
-    this.sidebar.flexLayout = new FlexLayout(this.sidebar.element, FlexLayout.Type.VERTICAL, 60);
+    this.sidebar.split = new SplitPane(this.sidebar.element, SplitPane.Type.VERTICAL, 60);
     this.sidebar.show();
 
     this.mapsList = new ListGroup('mapslist');
@@ -291,7 +290,7 @@ class MapExtension extends GuiExtension {
       placeholder: 'Search maps'
     });
 
-    this.sidebar.flexLayout.appendToFirstContainer(this.mapsList.element);
+    this.sidebar.split.one.appendChild(this.mapsList.element);
 
     this.sidebar.element.ondragover = (ev) => {
       ev.dataTransfer.dropEffect = "none";
@@ -317,7 +316,7 @@ class MapExtension extends GuiExtension {
 
     this.mapPane = new SplitPane(util.div());
 
-    this.mapPane.top.ondragover = (ev) => {
+    this.mapPane.one.ondragover = (ev) => {
       ev.dataTransfer.dropEffect = "none";
       for (let f of ev.dataTransfer.files) {
         let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i;
@@ -327,7 +326,7 @@ class MapExtension extends GuiExtension {
         }
       }
     };
-    this.mapPane.top.ondrop = (ev) => {
+    this.mapPane.one.ondrop = (ev) => {
       ev.preventDefault();
       for (let f of ev.dataTransfer.files) {
         let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i;
@@ -397,7 +396,7 @@ class MapExtension extends GuiExtension {
         this.builder.setConfiguration(this.maps[this.activeConfiguration._id]);
       }
     });
-    this.mapPane.bottom.appendChild(configDisplay);
+    this.mapPane.two.appendChild(configDisplay);
 
 
 
@@ -428,7 +427,7 @@ class MapExtension extends GuiExtension {
 
     this.sidebarOverlay.addList(this.layersControl.regionsWidget);
     this.sidebarOverlay.addList(this.layersControl.markersWidget);
-    this.sidebar.flexLayout.appendToLastContainer(this.layersControl.layersWidget.element);
+    this.sidebar.split.two.appendChild(this.layersControl.layersWidget.element);
 
     /**
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
@@ -477,14 +476,14 @@ class MapExtension extends GuiExtension {
 
 
   _setMap() {
-    this.mapPane.top.clear();
+    this.mapPane.one.clear();
     if (this.map) this.map.off();
     let mapCont = document.createElement('DIV');
     mapCont.style.width = '100%';
     mapCont.style.height = '100%';
     mapCont.style['z-index'] = 0;
     mapCont.id = this._options.map.id || 'map';
-    this.mapPane.top.appendChild(mapCont);
+    this.mapPane.one.appendChild(mapCont);
     let map = L.map(this._options.map.id || 'map', this._options.map); //define map object
 
     this.map = map;

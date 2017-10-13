@@ -28,7 +28,7 @@
     "leaflet-csvtiles": "",
     "leaflet-multilevel": "",
     "leaflet-map-builder": "",
-    "leaflet-draw": "^0.4.9",
+    "leaflet-draw": "^0.4.12",
     "leaflet-geometryutil": "^0.8.0",
     "leaflet-snap": "0.0.4",
     "leaflet.markercluster": "^1.0.4",

@@ -1025,8 +1025,7 @@ class MapExtension extends GuiExtension {
             maxZoom: 8
           },
           name: path,
-          baseLayer: true,
-          author: 'unknow'
+          baseLayer: true
         });
         this.gui.notify(`${path} added`);
         util.notifyOS(`"${path} added"`);

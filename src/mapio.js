@@ -369,7 +369,7 @@ function exportConfiguration(configuration, dir, cl) {
  * Shows a modal to add a new csvTile layer
  */
 function modalcsvlayer(cl) {
-  let body = util.div('cellconteiner');
+  let body = util.div('cell-container');
   let name = input.input({
     id: 'namenewlayer',
     type: 'text',
@@ -506,7 +506,7 @@ function modalcsvlayer(cl) {
  * Shows a modal to add a new TileLayer
  */
 function modaltilelayer(cl) {
-  let body = util.div('cellconteiner');
+  let body = util.div('cell-container');
   let attribution = null;
   let name = input.input({
     id: 'namenewlayer',
@@ -524,6 +524,13 @@ function modaltilelayer(cl) {
     className: 'cell form-control',
     placeholder: 'tiles url template (right click for help)',
     parent: body,
+    oninput: (inp) => {
+      if (inp.value.includes('{level}')) {
+        lC.show()
+      } else {
+        lC.hide()
+      }
+    },
     oncontextmenu: (inp, e) => {
       let menu = Menu.buildFromTemplate([{
         label: 'Local file/directory',
@@ -616,35 +623,58 @@ function modaltilelayer(cl) {
       base = true;
       btn.innerHTML = 'base layer';
     }
-  });
-  (new Modal({
-    title: 'Add a tileLayer',
-    body: body,
-    width: '200px',
-    onsubmit: () => {
-      cl({
-        name: name.value,
-        type: 'tileLayer',
-        tilesUrlTemplate: url.value,
-        baseLayer: base,
-        options: {
-          tileSize: JSON.parse(tileSize.value || 256) || 256,
-          minNativeZoom: minz.value,
-          maxNativeZoom: maxz.value,
-          minZoom: minz.value,
-          maxZoom: maxz.value,
-          attribution: attribution,
-        }
-      });
-    }
-  })).show();
+  })
+  let lC = new ToggleElement(util.div('cell-container'))
+  let minl = input.input({
+    id: 'minzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'minLevel',
+    parent: lC,
+    value: 0
+  })
+  let maxl = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxLevel',
+    parent: lC,
+    value: 0
+  })
+  lC.hide().appendTo(body)
+    (new Modal({
+      title: 'Add a tileLayer',
+      body: body,
+      width: '200px',
+      onsubmit: () => {
+        cl({
+          name: name.value,
+          type: 'tileLayer',
+          tilesUrlTemplate: url.value,
+          baseLayer: base,
+          mulitLevel: url.includes('{level}'),
+          options: {
+            tileSize: JSON.parse(tileSize.value || 256) || 256,
+            minNativeZoom: minz.value,
+            maxNativeZoom: maxz.value,
+            minZoom: minz.value,
+            maxZoom: maxz.value,
+            minLevel: 0,
+            maxLevel: 10
+            attribution: attribution
+          }
+        })
+      }
+    })).show()
 }
 
 /**
  * Show a modal to add a new guide layer
  */
 function modalGuideLayer(cl) {
-  let body = util.div('cellconteiner');
+  let body = util.div('cell-container');
   let name = input.input({
     id: 'namenewlayer',
     type: 'text',

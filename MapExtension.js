@@ -282,7 +282,9 @@ class MapExtension extends GuiExtension {
     this.sidebar = new Sidebar(this.element, {
       className: 'pane-sm scrollable'
     });
-    this.sidebar.split = new SplitPane(this.sidebar.element, SplitPane.Type.VERTICAL, 60);
+    this.sidebar.split = new SplitPane(util.div(), SplitPane.Type.VERTICAL, 60);
+    this.sidebar.split.appendTo(this.sidebar)
+    this.sidebar.split.showSecondPane();
     this.sidebar.show();
 
     this.mapsList = new ListGroup('mapslist');

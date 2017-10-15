@@ -166,9 +166,10 @@
        this.gui.viewTrick();
      });
 
-     this.builder.on('a')
+     this.builder.on('set:map',()=>{
+       this._drawEvents()
+     })
 
-     this._drawEvents()
 
    }
 
@@ -819,6 +820,7 @@
 
    _rename(layer, configuration, list) {
      let txtLayerName = input.input({
+       autofocus: true,
        type: "text",
        id: `txtLayerName_${configuration._id}_modal`,
        value: configuration.name,

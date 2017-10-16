@@ -144,7 +144,7 @@
      });
 
      this.builder.on('load:control', (e) => {
-       if (e.controlType === 'draw') {
+       if (e.controlType === 'draw' && this.builder.map) {
          this.builder.map.addLayer(this.builder._drawnItems);
        }
      });
@@ -162,7 +162,9 @@
 
 
      this.builder.on('add:drawnitems', (e) => {
-       this.builder._configuration.layers.drawnItems = e.configuration;
+       if (this.builder._configuration && this.builder._configuration.layers){
+         this.builder._configuration.layers.drawnItems = e.configuration;
+       }
        this.gui.viewTrick();
      });
 

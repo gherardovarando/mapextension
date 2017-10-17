@@ -260,7 +260,7 @@ function parseLayer(config, basePath) {
     }else if (url.startsWith(basePath)) {
       config.url = url
     }else{
-      conficonfig.url = path.join(basePath,url)
+      config.url = path.join(basePath,url)
     }
   }
   if (config.type == 'tilesLayer' || config.type == 'tileLayer') {

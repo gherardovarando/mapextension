@@ -995,61 +995,52 @@ class MapExtension extends GuiExtension {
       let siz = Math.max(dim.height, dim.width)
       this.addLayer({
         name: path,
-        imageUrl: path,
-        tilesUrlTemplate: path,
-        maxZoom: 8,
-        maxNativeZoom: 0,
+        url: path,
         author: 'unknown',
         type: options.type || 'imageOverlay',
-        opacity: 1,
-        //tileSize: 256,
-        tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-        bounds: [
-          [-Math.floor(dim.height * 256 / siz), 0],
-          [0, Math.floor(dim.width * 256 / siz)]
-        ]
+        options: {
+          maxZoom: 8,
+          maxNativeZoom: 0,
+          opacity: 1,
+          tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+          bounds: [
+            [-Math.floor(dim.height * 256 / siz), 0],
+            [0, Math.floor(dim.width * 256 / siz)]
+          ]
+        }
+
       })
     } else if (path.endsWith('.csv')) {
-      // this.addLayer({
-      //     name: path,
-      //     author: 'unknow',
-      //     type: 'pointsLayer',
-      //     tiles_format: 'csv',
-      //     pointsUrlTemplate: path,
-      //     tileSize: this.builder.getSize() || 256,
-      //     size: this.builder.getSize() || 256,
-      //     maxNativeZoom: 0,
-      //     maxZoom: 8
-      // })
-    } else if (path.endsWith('.tiff') || path.endsWith('.tif')) { //convert it to png and use it
-      var converter = new ConvertTiff({
-        prefix: 'slice'
-      })
 
-      converter.progress = (converted, total) => {
-        var dim = sizeOf(`${converted[0].target}\/slice1.png`)
-        let siz = Math.max(dim.height, dim.width)
-        this.addLayer({
-          type: `tileLayer`,
-          tilesUrlTemplate: `${converted[0].target}\/slice{t}.png`,
-          options: {
-            customKeys: {
-              "t": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            },
-            t: 1,
-            tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-            bounds: [
-              [-Math.floor(dim.height * 256 / siz), 0],
-              [0, Math.floor(dim.width * 256 / siz)]
-            ],
-            maxNativeZoom: 0,
-            maxZoom: 8
-          },
-          name: path,
-          baseLayer: true
-        })
-        this.gui.notify(`${path} added`)
-        util.notifyOS(`"${path} added"`)
+    } else if (path.endsWith('.tiff') || path.endsWith('.tif')) { //convert it to png and use it
+      // var converter = new ConvertTiff({
+      //   prefix: 'slice'
+      // })
+      //
+      // converter.progress = (converted, total) => {
+      //   var dim = sizeOf(`${converted[0].target}\/slice1.png`)
+      //   let siz = Math.max(dim.height, dim.width)
+      //   this.addLayer({
+      //     type: `tileLayer`,
+      //     url: `${converted[0].target}\/slice{t}.png`,
+      //     options: {
+      //       customKeys: {
+      //         "t": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      //       },
+      //       t: 1,
+      //       tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+      //       bounds: [
+      //         [-Math.floor(dim.height * 256 / siz), 0],
+      //         [0, Math.floor(dim.width * 256 / siz)]
+      //       ],
+      //       maxNativeZoom: 0,
+      //       maxZoom: 8
+      //     },
+      //     name: path,
+      //     baseLayer: true
+      //   })
+      //   this.gui.notify(`${path} added`)
+      //   util.notifyOS(`"${path} added"`)
       }
       this.gui.notify(`${path} started conversion`)
       converter.convertArray([path], mapio.basePath(null, path))

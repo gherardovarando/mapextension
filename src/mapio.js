@@ -401,7 +401,7 @@ function modalcsvlayer(cl, config) {
     className: 'cell form-control',
     placeholder: 'tiles url template',
     parent: body,
-    value: config.urlTemplate || '',
+    value: config.url || '',
     oncontextmenu: (inp, e) => {
       let menu = Menu.buildFromTemplate([{
         label: 'Local file/directory',
@@ -502,7 +502,7 @@ function modalcsvlayer(cl, config) {
       cl({
         name: name.value,
         type: 'csvTiles',
-        urlTemplate: url.value,
+        url: url.value,
         options: {
           tileSize: JSON.parse(tileSize.value || 256) || 256,
           size: JSON.parse(size.value || 256) || 256,
@@ -549,7 +549,7 @@ function modaltilelayer(cl, config) {
     className: 'cell form-control',
     placeholder: 'tiles url template (right click for help)',
     parent: body,
-    value: config.tileUrlTemplate || '',
+    value: config.url || '',
     oninput: (inp) => {
       if (inp.value.includes('{level}')) {
         lC.show()
@@ -678,7 +678,7 @@ function modaltilelayer(cl, config) {
       cl({
         name: name.value,
         type: 'tileLayer',
-        tileUrlTemplate: url.value,
+        url: url.value,
         baseLayer: base,
         multiLevel: url.value.includes('{level}'),
         options: {

@@ -34,6 +34,7 @@ const {
   util,
   input
 } = require('electrongui')
+const path = require('path')
 const sizeOf = require('image-size')
 const ConvertTiff = require('tiff-to-png')
 const json2csv = require('json2csv')

@@ -449,8 +449,8 @@ class MapExtension extends GuiExtension {
         if (wk && wk.maps) maps = wk.maps
         if (wk && wk.options) {
           this._options = wk.options
-        }else {
-           this._settingsModal()
+        } else {
+          this._settingsModal()
         }
         let tot = 0
         Object.keys(maps).map((id, i) => {
@@ -1041,9 +1041,9 @@ class MapExtension extends GuiExtension {
       //   })
       //   this.gui.notify(`${path} added`)
       //   util.notifyOS(`"${path} added"`)
-      }
-      this.gui.notify(`${path} started conversion`)
-      converter.convertArray([path], mapio.basePath(null, path))
+      //}
+      //this.gui.notify(`${path} started conversion`)
+      //converter.convertArray([path], mapio.basePath(null, path))
     }
   }
 

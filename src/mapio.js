@@ -245,17 +245,24 @@ function parseMap(configuration) {
 
 function parseLayer(config, basePath) {
   basePath = basePath || ''
+  let url = config.url || config.urlTemplate || config.tilesUrlTemplate || config.tileUrlTemplate || config.pointsUrlTemplate || config.imageUrl
+  delete config.urlTemplate
+  delete config.tilesUrlTemplate
+  delete config.tileUrlTemplate
+  delete config.pointsUrlTemplate
+  delete config.imageUrl
   if (config.type == 'tilesLayer' || config.type == 'tileLayer') {
     config.type = 'tileLayer'
-    config.tileUrlTemplate = path.join(basePath || config.tileUrlTemplate || config.tilesUrlTemplate || config.urlTemplate || '')
+    config.url = path.join(basePath,url)
   }
   if (config.type.includes('pointsLayer')) {
-    config.urlTemplate =
+    config.url = path.join(basePath,url)
   }
   if (config.type.includes('csvTiles')) {
-    config.url = basePath + config.url
+    config.url = path.join(basePath,url)
   }
   if (config.type.includes('pixelsLayer')) {
+    config.url = path.join(basePath,url)
 
   }
   if (config.type.includes('guideLayer')) {
@@ -265,10 +272,11 @@ function parseLayer(config, basePath) {
 
   }
   if (config.type.includes('imageLayer')) {
-    //config.url = basePath + config.url
+    config.url = path.join(basePath,url)
   }
   if (config.type.includes('drawnPolygons')) {
     config.type = 'featureGroup'
+    config.role = 'drawnItems'
     if (config.polygons) {
       config.layers = config.polygons
     } else {
@@ -293,7 +301,7 @@ function parseLayer(config, basePath) {
       config.layers[key].type = config.layers[key].type || 'marker'
     })
   }
-  //delete config.basePath //because we joined all in the path
+  delete config.basePath //because we joined all in the path
   return config
 }
 
@@ -332,16 +340,16 @@ function exportConfiguration(configuration, dir, cl) {
         let l = conf.layers[key]
         switch (l.type) { //remove the base path from the url of the layers
           case "tilesLayer":
-            l.tilesUrlTemplate = l.tilesUrlTemplate.replace(basePath, "")
+            l.url = l.url.replace(basePath, "")
             break
           case "pointsLayer":
-            l.pointsUrlTemplate = l.pointsUrlTemplate.replace(basePath, "")
+            l.url = l.url.replace(basePath, "")
             break
           case "pixelsLayer":
-            l.pixelsUrlTemplate = l.pixelsUrlTemplate.replace(basePath, "")
+            l.url = l.url.replace(basePath, "")
             break
           case "imageLayer":
-            l.imageUrl = l.imageUrl.replace(basePath, "")
+            l.url = l.url.replace(basePath, "")
             break
           default:
         }

@@ -242,6 +242,9 @@ function parseMap(configuration) {
   return configuration
 }
 
+function isAbsolute(x){
+  return (x.startsWith('http:') || x.startsWith('file:') || path.isAbsolute(x))
+}
 
 function parseLayer(config, basePath) {
   basePath = basePath || ''
@@ -251,18 +254,23 @@ function parseLayer(config, basePath) {
   delete config.tileUrlTemplate
   delete config.pointsUrlTemplate
   delete config.imageUrl
+  if (url){
+    if (isAbsolute(url)){
+      config.url = url
+    }else if (url.startsWith(basePath)) {
+      config.url = url
+    }else{
+      conficonfig.url = path.join(basePath,url)
+    }
+  }
   if (config.type == 'tilesLayer' || config.type == 'tileLayer') {
     config.type = 'tileLayer'
-    config.url = path.join(basePath,url)
   }
   if (config.type.includes('pointsLayer')) {
-    config.url = path.join(basePath,url)
   }
   if (config.type.includes('csvTiles')) {
-    config.url = path.join(basePath,url)
   }
   if (config.type.includes('pixelsLayer')) {
-    config.url = path.join(basePath,url)
 
   }
   if (config.type.includes('guideLayer')) {
@@ -272,7 +280,7 @@ function parseLayer(config, basePath) {
 
   }
   if (config.type.includes('imageLayer')) {
-    config.url = path.join(basePath,url)
+
   }
   if (config.type.includes('drawnPolygons')) {
     config.type = 'featureGroup'

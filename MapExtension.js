@@ -983,13 +983,12 @@ class MapExtension extends GuiExtension {
    * @param {string} path    [description]
    * @param {object} options [description]
    */
-  addLayerFile(path, options) {
+  addLayerFile(pth, options) {
     options = options || {}
-    if (path.endsWith('.json')) {
-      let conf = util.readJSONsync(path)
+    if (pth.endsWith('.json')) {
+      let conf = util.readJSONsync(pth)
       if (!conf) return
-      conf.basePath = mapio.basePath(conf, path)
-      conf = mapio.parseLayer(conf, path)
+      conf = mapio.parseLayer(conf, path.dirname(pth))
       this.addLayer(conf)
     } else if (path.endsWith('.jpg') || path.endsWith('.JPG') || path.endsWith('.png') || path.endsWith('.gif')) {
       var dim = sizeOf(path)

@@ -35,7 +35,7 @@ const {
   input,
   ToggleElement,
   Sidebar
-} = require('electrongui')
+} = module.parent.parent.require('electrongui')
 
 const {
   Menu,
@@ -560,19 +560,6 @@ function modalcsvlayer(cl, config) {
     parent: paneStyle,
     value: config.options.maxZoom || 10
   })
-<<<<<<< HEAD
-  let colx = input.input({
-    id: 'maxzoomnewlayer',
-    type: 'number',
-    label: '',
-    className: 'cell form-control',
-    placeholder: 'maxZoom',
-    parent: body,
-    value: config.options.columns.x || 0
-=======
-
-
-
   let colx = input.input({
     type: 'number',
     label: 'x:',
@@ -581,8 +568,8 @@ function modalcsvlayer(cl, config) {
     min: 0,
     parent: paneCsv,
     value: config.options.columns.x
->>>>>>> 5239c799ee558031620d8ffe59137dc04aa7cf0f
   })
+
   let coly = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',

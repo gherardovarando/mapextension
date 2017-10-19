@@ -33,7 +33,7 @@ const {
   ButtonsContainer,
   util,
   input
-} = require('electrongui')
+} = module.parent.require('electrongui') // use module.parent so it can be imported
 const path = require('path')
 const sizeOf = require('image-size')
 const ConvertTiff = require('tiff-to-png')
@@ -137,7 +137,7 @@ class MapExtension extends GuiExtension {
       }, {
         label: 'Export map',
         click: () => {
-          mapio.saveAs(this.builder.getConfiguration(), (c, p, e) => {
+          mapio.saveAs(this.activeConfiguration, (c, p, e) => {
             this.gui.notify(`${c.name} map saved in ${p}`)
           }, (err) => {
             this.gui.notify(err)
@@ -208,6 +208,7 @@ class MapExtension extends GuiExtension {
       expert: isDev,
     }
     this._options = {
+      toolbar: true,
       map: {
         zoomSnap: 1,
         zoomDelta: 1,
@@ -280,6 +281,7 @@ class MapExtension extends GuiExtension {
       groupId: this.constructor.name,
       title: 'Maps'
     })
+    //if (this._options.toolbar || true) this._addToolbar()
     //add the sidebars
     this.sidebar = new Sidebar(this.element, {
       className: 'pane-sm scrollable'
@@ -497,7 +499,140 @@ class MapExtension extends GuiExtension {
   deactivate() { /// the extension has to take care of removing all the buttons and element appended outside of the main extension pane
     this.builder.map.off() //unbind all events
     this.removeToggleButton(this.constructor.name) //this is compulsory to leave the interface clean
+    this._removeToolbar()
     super.deactivate() //we will also call the super class deactivate method
+  }
+
+
+  _addToolbar() {
+    this._removeToolbar()
+    this.gui.header.actionsContainer.addButton({
+      id: `${this.constructor.name}newmap`,
+      groupId: this.constructor.name,
+      icon: 'fa fa-plus',
+      title: 'Add..',
+      className: 'btn-default btn-dropdown',
+      action: (btn) => {
+        let ctn = Menu.buildFromTemplate([{
+            label: 'Create map',
+            click: () => {
+              mapio.modal.createMap((conf) => {
+                this.addNewMap(conf)
+              })
+            }
+          },
+          {
+            label: 'Load map',
+            click: () => {
+              mapio.loadMapFile((conf) => {
+                this.addNewMap(conf)
+              })
+            }
+          },
+          {
+            label: 'Add layer',
+            type: 'submenu',
+            submenu: [{
+              label: 'File',
+              click: () => {
+                if (!this._isLoaded) {
+                  this.gui.notify('First load or create a map')
+                  return
+                }
+                this.openLayerFile()
+              }
+            }, {
+              label: 'Tiles Url',
+              click: () => {
+                if (!this._isLoaded) {
+                  this.gui.notify('First load or create a map')
+                  return
+                }
+                mapio.modal.tileLayer((conf) => {
+                  this.addLayer(conf)
+                })
+              }
+            }, {
+              label: 'CsvTiles ',
+              click: () => {
+                if (!this._isLoaded) {
+                  this.gui.notify('First load or create a map')
+                  return
+                }
+                mapio.modal.csvTiles((conf) => {
+                  this.addLayer(conf)
+                })
+              }
+            }, {
+              label: 'Guide',
+              click: () => {
+                if (!this._isLoaded) {
+                  this.gui.notify('First load or create a map')
+                  return
+                }
+                mapio.modal.guideLayer((conf) => {
+                  this.addLayer(conf)
+                })
+              }
+            }]
+          }
+        ])
+        ctn.popup()
+      }
+    })
+    let expBtn = this.gui.header.actionsContainer.addButton({
+      id: `${this.constructor.name}savemap`,
+      groupId: this.constructor.name,
+      icon: 'icon icon-down-bold icon-warning',
+      title: 'export current map',
+      action: () => {
+        if (this._isLoaded) {
+          mapio.saveAs(this.activeConfiguration, (c, p, e) => {
+            this.gui.notify(`${c.name} map saved in ${p}`)
+          }, (err) => {
+            this.gui.notify(err)
+          })
+        }
+      }
+    })
+    if (this._isLoaded) {
+      expBtn.children[0].classList.remove('icon-warning')
+      expBtn.children[0].classList.add('icon-primary')
+    }
+    this.builder.on('clear', () => {
+      expBtn.children[0].classList.add('icon-warning')
+      expBtn.children[0].classList.remove('icon-primary')
+    })
+    this.builder.on('reload', () => {
+      expBtn.children[0].classList.remove('icon-warning')
+      expBtn.children[0].classList.add('icon-primary')
+    })
+    this.gui.header.actionsContainer.addButton({
+      id: `${this.constructor.name}setting`,
+      groupId: this.constructor.name,
+      icon: 'fa fa-cog',
+      title: 'settings',
+      action: () => {
+        this._settingsModal()
+      }
+    })
+
+  }
+
+  _removeToolbar() {
+    this.gui.header.actionsContainer.removeButton(`${this.constructor.name}newmap`)
+    this.gui.header.actionsContainer.removeButton(`${this.constructor.name}savemap`)
+    this.gui.header.actionsContainer.removeButton(`${this.constructor.name}setting`)
+  }
+
+  show() {
+    super.show()
+    this._addToolbar()
+  }
+
+  hide() {
+    super.hide()
+    this._removeToolbar()
   }
 
 
@@ -890,7 +1025,7 @@ class MapExtension extends GuiExtension {
           noLink: true
         }, (id) => {
           if (id > 0) {
-            if (this.activeConfiguration._id == configuration._id) {
+            if (this.activeConfiguration && this.activeConfiguration._id == configuration._id) {
               this.builder.clear(true)
             }
             this.mapsList.removeItem(configuration._id)

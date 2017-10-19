@@ -629,12 +629,11 @@ class MapExtension extends GuiExtension {
         deactive: () => {
           sid.list.activeItem('draw')
         },
-        active:
-          () => {
-            hideA()
-            sid.list.deactiveAll()
-            cdraw.show()
-          }
+        active: () => {
+          hideA()
+          sid.list.deactiveAll()
+          cdraw.show()
+        }
       }
     })
     sid.show()

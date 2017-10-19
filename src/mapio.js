@@ -33,7 +33,8 @@ const {
   Modal,
   ButtonsContainer,
   input,
-  ToggleElement
+  ToggleElement,
+  Sidebar
 } = require('electrongui')
 
 const {
@@ -242,7 +243,7 @@ function parseMap(configuration) {
   return configuration
 }
 
-function isAbsolute(x){
+function isAbsolute(x) {
   return (x.startsWith('http:') || x.startsWith('file:') || path.isAbsolute(x))
 }
 
@@ -254,22 +255,20 @@ function parseLayer(config, basePath) {
   delete config.tileUrlTemplate
   delete config.pointsUrlTemplate
   delete config.imageUrl
-  if (url){
-    if (isAbsolute(url)){
+  if (url) {
+    if (isAbsolute(url)) {
       config.url = url
-    }else if (url.startsWith(basePath)) {
+    } else if (url.startsWith(basePath)) {
       config.url = url
-    }else{
-      config.url = path.join(basePath,url)
+    } else {
+      config.url = path.join(basePath, url)
     }
   }
   if (config.type == 'tilesLayer' || config.type == 'tileLayer') {
     config.type = 'tileLayer'
   }
-  if (config.type.includes('pointsLayer')) {
-  }
-  if (config.type.includes('csvTiles')) {
-  }
+  if (config.type.includes('pointsLayer')) {}
+  if (config.type.includes('csvTiles')) {}
   if (config.type.includes('pixelsLayer')) {
 
   }
@@ -390,16 +389,104 @@ function exportConfiguration(configuration, dir, cl) {
  */
 function modalcsvlayer(cl, config) {
   config = config || {
-    options: {}
+    options: {
+      columns: {
+        x: 0,
+        y: 1
+      }
+    }
   }
-  let body = util.div('cell-container')
+  let body = util.div('pane pane-group')
+  let sidebar = new Sidebar(body, {
+    className: 'pane-mini'
+  })
+  let paneMain = new ToggleElement(util.div('pane padded'), body)
+  let paneSize = new ToggleElement(util.div('pane padded'), body)
+  let paneCsv = new ToggleElement(util.div('pane padded'), body)
+  let paneStyle = new ToggleElement(util.div('pane padded'), body)
+  let hideA = () => {
+    paneMain.hide()
+    paneCsv.hide()
+    paneStyle.hide()
+    paneSize.hide()
+  }
+  paneSize.hide()
+  paneCsv.hide()
+  paneStyle.hide()
+
+  sidebar.addList()
+  sidebar.addItem({
+    id: 'main',
+    title: '',
+    active: true,
+    icon: 'fa fa-cog',
+    toggle: true,
+    onclick: {
+      deactive: () => {
+        sidebar.list.activeItem('main')
+      },
+      active: () => {
+        hideA()
+        sidebar.list.deactiveAll()
+        paneMain.show()
+      }
+    }
+  })
+  sidebar.addItem({
+    id: 'size',
+    title: '',
+    icon: 'fa fa-arrows',
+    toggle: true,
+    onclick: {
+      deactive: () => {
+        sidebar.list.activeItem('size')
+      },
+      active: () => {
+        hideA()
+        sidebar.list.deactiveAll()
+        paneSize.show()
+      }
+    }
+  })
+  sidebar.addItem({
+    id: 'csv',
+    title: '',
+    icon: 'fa fa-file-text-o',
+    toggle: true,
+    onclick: {
+      deactive: () => {
+        sidebar.list.activeItem('csv')
+      },
+      active: () => {
+        hideA()
+        sidebar.list.deactiveAll()
+        paneCsv.show()
+      }
+    }
+  })
+  sidebar.addItem({
+    id: 'style',
+    title: '',
+    icon: 'fa fa-adjust',
+    toggle: true,
+    onclick: {
+      deactive: () => {
+        sidebar.list.activeItem('style')
+      },
+      active: () => {
+        hideA()
+        sidebar.list.deactiveAll()
+        paneStyle.show()
+      }
+    }
+  })
   let name = input.input({
     id: 'namenewlayer',
     type: 'text',
     label: '',
     className: 'cell form-control',
     placeholder: 'name',
-    parent: body,
+    parent: paneMain,
     value: config.name || ''
   })
   let url = input.input({
@@ -408,7 +495,7 @@ function modalcsvlayer(cl, config) {
     label: '',
     className: 'cell form-control',
     placeholder: 'tiles url template',
-    parent: body,
+    parent: paneMain,
     value: config.url || '',
     oncontextmenu: (inp, e) => {
       let menu = Menu.buildFromTemplate([{
@@ -427,13 +514,14 @@ function modalcsvlayer(cl, config) {
       menu.popup()
     }
   })
+
   let tileSize = input.input({
     id: 'tilesizenewlayer',
     type: 'text',
     label: '',
     className: 'cell form-control',
     placeholder: 'tile size',
-    parent: body,
+    parent: paneSize,
     value: config.options.tileSize || ''
   })
   let size = input.input({
@@ -442,7 +530,7 @@ function modalcsvlayer(cl, config) {
     label: '',
     className: 'cell form-control',
     placeholder: 'size',
-    parent: body,
+    parent: paneSize,
     value: config.options.size || ''
   })
   let bounds = input.input({
@@ -451,7 +539,7 @@ function modalcsvlayer(cl, config) {
     label: '',
     className: 'cell form-control',
     placeholder: 'bounds [[lat,lng],[lat,lng]]',
-    parent: body,
+    parent: paneSize,
     value: config.options.bounds || ''
   })
   let minz = input.input({
@@ -460,7 +548,7 @@ function modalcsvlayer(cl, config) {
     label: '',
     className: 'cell form-control',
     placeholder: 'minZoom',
-    parent: body,
+    parent: paneStyle,
     value: config.options.minZoom || 0
   })
   let maxz = input.input({
@@ -469,9 +557,10 @@ function modalcsvlayer(cl, config) {
     label: '',
     className: 'cell form-control',
     placeholder: 'maxZoom',
-    parent: body,
+    parent: paneStyle,
     value: config.options.maxZoom || 10
   })
+<<<<<<< HEAD
   let colx = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
@@ -480,29 +569,44 @@ function modalcsvlayer(cl, config) {
     placeholder: 'maxZoom',
     parent: body,
     value: config.options.columns.x || 0
+=======
+
+
+
+  let colx = input.input({
+    type: 'number',
+    label: 'x:',
+    className: 'form-control',
+    placeholder: 'x',
+    min: 0,
+    parent: paneCsv,
+    value: config.options.columns.x
+>>>>>>> 5239c799ee558031620d8ffe59137dc04aa7cf0f
   })
   let coly = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
-    label: '',
-    className: 'cell form-control',
-    placeholder: 'maxZoom',
-    parent: body,
-    value: config.options.columns.y || 1
+    label: 'y:',
+    className: 'form-control',
+    placeholder: 'y',
+    min: 0,
+    parent: paneCsv,
+    value: config.options.columns.y
   })
   let colz = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
-    label: '',
-    className: 'cell form-control',
-    placeholder: 'maxZoom',
-    parent: body,
-    value: config.options.columns.z || 2
+    label: 'z:',
+    className: 'form-control',
+    placeholder: 'undefined',
+    parent: paneCsv,
+    value: config.options.columns.z
   })
+
   let localRS = true
   input.checkButton({
     id: 'localRSnewlayer',
-    parent: body,
+    parent: paneSize,
     text: 'localRS',
     className: 'cell',
     active: config.options.localRS,
@@ -517,7 +621,7 @@ function modalcsvlayer(cl, config) {
   let grid = true
   input.checkButton({
     id: 'gridnewlayer',
-    parent: body,
+    parent: paneStyle,
     text: 'grid',
     className: 'cell',
     active: config.options.grid,
@@ -532,7 +636,7 @@ function modalcsvlayer(cl, config) {
   let modal = new Modal({
     title: 'Add a csvTiles',
     body: body,
-    width: '200px',
+    width: '300px',
     onsubmit: () => {
       cl({
         name: name.value,
@@ -547,9 +651,9 @@ function modalcsvlayer(cl, config) {
           localRS: localRS,
           grid: grid,
           columns: {
-            x: 0,
-            y: 1,
-            z: 2
+            x: colx.value,
+            y: coly.value,
+            z: colz.value
           }
         }
       })

@@ -140,7 +140,7 @@
      });
 
      this.builder.on('error', (e) => {
-       this.gui.notify(e.error);
+       this.gui.notify('MapBuilder Error',e.error,'danger');
      });
 
      this.builder.on('load:control', (e) => {
@@ -297,7 +297,7 @@
            label: 'Delete',
            click: () => {
              if (configuration.role && configuration.role.includes('drawnItems')) {
-               this.gui.notify('You dont want to remove the drawnItems layer...');
+               this.gui.notify('Warning','You dont want to remove the drawnItems layer...','warning');
                return;
              }
              this.overlaylist.removeItem(`${configuration._id}`);
@@ -594,7 +594,7 @@
              layer.setStyle({
                fillOpacity: 1
              });
-             this.gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
+             //this.gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.push({
                configuration: configuration,
@@ -606,7 +606,7 @@
                  fillOpacity: 1
                });
              }
-             this.gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
+             //this.gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (configuration.baseLayer) {
                where.removeLayer(this.baseLayer);
@@ -625,7 +625,7 @@
                layer: layer,
                where: where
              }), 1);
-             this.gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
+             //this.gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
              layer.setStyle({
                fillOpacity: configuration.options.fillOpacity || 0.3
              });
@@ -640,7 +640,7 @@
                  fillOpacity: configuration.options.fillOpacity || 0.3
                });
              }
-             this.gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
+             //this.gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (!configuration.baseLayer) {
                where.removeLayer(layer);

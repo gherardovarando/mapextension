@@ -472,6 +472,33 @@ function modalcsvlayer(cl, config) {
     parent: body,
     value: config.options.maxZoom || 10
   })
+  let colx = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxZoom',
+    parent: body,
+    value: config.options.columns.x || 0
+  })
+  let coly = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxZoom',
+    parent: body,
+    value: config.options.columns.y || 1
+  })
+  let colz = input.input({
+    id: 'maxzoomnewlayer',
+    type: 'number',
+    label: '',
+    className: 'cell form-control',
+    placeholder: 'maxZoom',
+    parent: body,
+    value: config.options.columns.z || 2
+  })
   let localRS = true
   input.checkButton({
     id: 'localRSnewlayer',

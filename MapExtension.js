@@ -555,7 +555,6 @@ class MapExtension extends GuiExtension {
                 }
                 mapio.modal.tileLayer((conf) => {
                   this.addLayer(conf)
-                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }, {
@@ -567,7 +566,6 @@ class MapExtension extends GuiExtension {
                 }
                 mapio.modal.csvTiles((conf) => {
                   this.addLayer(conf)
-                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }, {
@@ -579,7 +577,6 @@ class MapExtension extends GuiExtension {
                 }
                 mapio.modal.guideLayer((conf) => {
                   this.addLayer(conf)
-                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }]

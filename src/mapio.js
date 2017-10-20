@@ -332,14 +332,14 @@ function saveAs(configuration, cl, errcl) {
       }
       return
     }
-    exportConfiguration(configuration, fileName, cl)
+    exportConfiguration(configuration, fileName, cl, errcl)
   })
 }
 
 
 
 
-function exportConfiguration(configuration, dir, cl) {
+function exportConfiguration(configuration, dir, cl, errcl) {
   try {
     if (typeof dir === 'string') {
       let basePath = dir.replace(path.basename(dir), "")
@@ -371,18 +371,17 @@ function exportConfiguration(configuration, dir, cl) {
       let content = JSON.stringify(conf)
       fs.writeFile(dir, content, (error) => {
         if (error) {
-          util.notifyOS(error)
-        } else {
-          util.notifyOS(`Map ${configuration.map} saved in ${dir}`)
+          if (typeof cl === 'function') {
+            errcl(configuration, dir, error)
+          }
+          return
         }
         if (typeof cl === 'function') {
-          cl(configuration, dir, error)
+          cl(configuration, dir)
         }
       })
     }
-  } catch (e) {
-    util.notifyOS(e)
-  }
+  } catch (e) {}
 }
 
 /**

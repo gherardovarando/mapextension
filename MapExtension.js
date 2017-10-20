@@ -443,14 +443,43 @@ class MapExtension extends GuiExtension {
         maps: this.maps
       })
 
-      this.gui.workspace.on('load', this.loadWorkspace)
+      let loadWorkspace = () => {
+        this.gui.alerts.add('loading maps from workspace...', 'default')
+        if (this.builder) this.builder.clear(true)
+        if (this.mapsList) this.mapsList.clean()
+        this.maps = {}
+        let wk = this.gui.workspace.getSpace(this)
+        let maps = {}
+        if (wk && wk.maps) maps = wk.maps
+        if (wk && wk.options) {
+          this._options = wk.options
+        } else {
+          this._settingsModal()
+        }
+        let tot = 0
+        Object.keys(maps).map((id, i) => {
+          this.addNewMap(mapio.parseMap(maps[id]))
+          tot++
+        })
+        this.gui.workspace.addSpace(this, {
+          maps: this.maps,
+          options: this._options
+        }, true) //overwriting
+        this._setMap()
+        this.gui.alerts.add(`${tot} maps from workspace loaded`, 'default')
+      }
+
+      this.gui.workspace.on('load', loadWorkspace)
+      this.on('deactivate', ()=>{
+        this.gui.workspace.removeListener('load', loadWorkspace)
+      })
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of MapExtension
       if (this.gui.workspace.spaces.MapExtension) {
-         this.loadWorkspace()
+        this.loadWorkspace()
       }
 
-    }else {
+    } else {
       this._setMap()
     }
 
@@ -467,31 +496,7 @@ class MapExtension extends GuiExtension {
     super.deactivate() //we will also call the super class deactivate method
   }
 
-  loadWorkspace() {
-    this.gui.alerts.add('loading maps from workspace...', 'default')
-    if (this.builder) this.builder.clear(true)
-    if (this.mapsList) this.mapsList.clean()
-    this.maps = {}
-    let wk = this.gui.workspace.getSpace(this)
-    let maps = {}
-    if (wk && wk.maps) maps = wk.maps
-    if (wk && wk.options) {
-      this._options = wk.options
-    } else {
-      this._settingsModal()
-    }
-    let tot = 0
-    Object.keys(maps).map((id, i) => {
-      this.addNewMap(mapio.parseMap(maps[id]))
-      tot++
-    })
-    this.gui.workspace.addSpace(this, {
-      maps: this.maps,
-      options: this._options
-    }, true) //overwriting
-    this._setMap()
-    this.gui.alerts.add(`${tot} maps from workspace loaded`, 'default')
-  }
+
 
 
   _addToolbar() {

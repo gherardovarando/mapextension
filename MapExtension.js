@@ -476,7 +476,7 @@ class MapExtension extends GuiExtension {
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of MapExtension
       if (this.gui.workspace.spaces.MapExtension) {
-        this.loadWorkspace()
+        loadWorkspace()
       }
 
     } else {
@@ -492,7 +492,6 @@ class MapExtension extends GuiExtension {
     this.builder.map.off() //unbind all events
     this.removeToggleButton(this.constructor.name) //this is compulsory to leave the interface clean
     this._removeToolbar()
-    this.gui.workspace.removeListener('load', this.loadWorkspace)
     super.deactivate() //we will also call the super class deactivate method
   }
 

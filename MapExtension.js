@@ -582,8 +582,8 @@ class MapExtension extends GuiExtension {
       action: () => {
         if (this._isLoaded) {
           mapio.saveAs(this.activeConfiguration, (c, p) => {
-            this.gui.alerts.add(`${c.name} map saved in ${p}`)
-          }, (c,p,err) => {
+            this.gui.alerts.add(`${c.name} map saved in ${p}`, 'success')
+          }, (c, p, err) => {
             this.gui.alerts.add(`Error saving ${c.name} map in ${p} ${err}`, 'error')
           })
         }
@@ -1002,10 +1002,10 @@ class MapExtension extends GuiExtension {
       label: 'Export map',
       type: 'normal',
       click: () => {
-        mapio.(this.maps[configuration._id], (c, p) => {
+        mapio.saveAs(this.activeConfiguration, (c, p) => {
           this.gui.alerts.add(`${c.name} map saved in ${p}`, 'success')
-        }, (c, p,err) => {
-          this.gui.alerts.add(err, 'error')
+        }, (c, p, err) => {
+          this.gui.alerts.add(`Error saving ${c.name} map in ${p} ${err}`, 'error')
         })
       }
     }))

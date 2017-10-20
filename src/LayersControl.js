@@ -29,7 +29,7 @@
    ButtonsContainer,
    Modal,
    colors
- } = module.parent.parent.require('electrongui');
+ } = require('electrongui');
  const {
    Menu,
    MenuItem,

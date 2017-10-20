@@ -35,7 +35,7 @@ const {
   input,
   ToggleElement,
   Sidebar
-} = module.parent.parent.require('electrongui')
+} = require('electrongui')
 
 const {
   Menu,

@@ -33,7 +33,7 @@ const {
   ButtonsContainer,
   util,
   input
-} = module.parent.require('electrongui') // use module.parent so it can be imported
+} = require('electrongui') // use module.parent so it can be imported
 const path = require('path')
 const sizeOf = require('image-size')
 const ConvertTiff = require('tiff-to-png')

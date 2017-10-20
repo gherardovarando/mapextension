@@ -406,9 +406,6 @@ class MapExtension extends GuiExtension {
     })
     this.mapPane.two.appendChild(configDisplay)
 
-
-
-
     this.sidebarOverlay = new Sidebar(this.element, {
       className: 'pane-sm scrollable'
     })
@@ -446,7 +443,6 @@ class MapExtension extends GuiExtension {
         maps: this.maps
       })
 
-
       this.gui.workspace.on('load', this.loadWorkspace)
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of MapExtension
@@ -474,7 +470,7 @@ class MapExtension extends GuiExtension {
   loadWorkspace() {
     this.gui.alerts.add('loading maps from workspace...', 'default')
     if (this.builder) this.builder.clear(true)
-    this.mapsList.clean()
+    if (this.mapsList) this.mapsList.clean()
     this.maps = {}
     let wk = this.gui.workspace.getSpace(this)
     let maps = {}
@@ -512,7 +508,6 @@ class MapExtension extends GuiExtension {
             click: () => {
               mapio.modal.createMap((conf) => {
                 this.addNewMap(conf)
-
               })
             }
           },

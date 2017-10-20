@@ -438,7 +438,8 @@ class MapExtension extends GuiExtension {
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
      */
     if (this.gui.workspace) {
-      this.gui.workspace.addSpace(this, {
+
+      this.gui.workspace.addSpace('mapextension', {
         options: this._options,
         maps: this.maps
       })
@@ -448,7 +449,7 @@ class MapExtension extends GuiExtension {
         if (this.builder) this.builder.clear(true)
         if (this.mapsList) this.mapsList.clean()
         this.maps = {}
-        let wk = this.gui.workspace.getSpace(this)
+        let wk = this.gui.workspace.getSpace('mapextension')
         let maps = {}
         if (wk && wk.maps) maps = wk.maps
         if (wk && wk.options) {
@@ -461,7 +462,7 @@ class MapExtension extends GuiExtension {
           this.addNewMap(mapio.parseMap(maps[id]))
           tot++
         })
-        this.gui.workspace.addSpace(this, {
+        this.gui.workspace.addSpace('mapextension', {
           maps: this.maps,
           options: this._options
         }, true) //overwriting
@@ -470,14 +471,12 @@ class MapExtension extends GuiExtension {
       }
 
       this.gui.workspace.on('load', loadWorkspace)
-      this.on('deactivate', ()=>{
+      this.on('deactivate', () => {
         this.gui.workspace.removeListener('load', loadWorkspace)
       })
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of MapExtension
-      if (this.gui.workspace.spaces.MapExtension) {
-        loadWorkspace()
-      }
+      loadWorkspace()
 
     } else {
       this._setMap()

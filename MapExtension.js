@@ -454,6 +454,8 @@ class MapExtension extends GuiExtension {
          this.loadWorkspace()
       }
 
+    }else {
+      this._setMap()
     }
 
   } //end activate
@@ -471,7 +473,7 @@ class MapExtension extends GuiExtension {
 
   loadWorkspace() {
     this.gui.alerts.add('loading maps from workspace...', 'default')
-    this.builder.clear(true)
+    if (this.builder) this.builder.clear(true)
     this.mapsList.clean()
     this.maps = {}
     let wk = this.gui.workspace.getSpace(this)

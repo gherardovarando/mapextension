@@ -440,7 +440,7 @@ class MapExtension extends GuiExtension {
     /**
      * check if there is the workspace, and add the space of this application, moreover check if there are some maps and load them.
      */
-    if (this.gui.workspace instanceof Workspace) {
+    if (this.gui.workspace) {
       this.gui.workspace.addSpace(this, {
         options: this._options,
         maps: this.maps

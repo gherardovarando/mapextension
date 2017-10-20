@@ -104,7 +104,7 @@ class MapExtension extends GuiExtension {
         label: 'Show configuration',
         click: () => {
           if (!this._settings.expert) {
-            dialog.showErrorBox('You are no expert', 'You should enable expert mode in Maps->settings')
+            this.gui.alerts.add('You should enable expert mode in Maps->settings to see raw configuration','warning')
           } else {
             this.configEditor.set(this.activeConfiguration)
             this.mapPane.toggleSecondPane()
@@ -125,6 +125,7 @@ class MapExtension extends GuiExtension {
         click: () => {
           mapio.loadMapFile((conf) => {
             this.addNewMap(conf)
+            this.gui.alerts.add(`${conf.name} map loaded`,'success')
           })
         }
       }, {
@@ -132,15 +133,16 @@ class MapExtension extends GuiExtension {
         click: () => {
           mapio.modal.createMap((conf) => {
             this.addNewMap(conf)
+            //this.gui.alerts.add(`map created`,'success')
           })
         }
       }, {
         label: 'Export map',
         click: () => {
           mapio.saveAs(this.activeConfiguration, (c, p, e) => {
-            this.gui.notify(`${c.name} map saved in ${p}`,'success')
+            this.gui.alerts.add(`${c.name} map saved in ${p}`,'success')
           }, (err) => {
-            this.gui.notify(err,'error')
+            this.gui.alerts.add(err,'error')
           })
         },
       }, {
@@ -152,7 +154,7 @@ class MapExtension extends GuiExtension {
           label: 'File',
           click: () => {
             if (!this._isLoaded) {
-              this.gui.notify('First load or create a map','warning')
+              this.gui.alerts.add('First load or create a map','warning')
               return
             }
             this.openLayerFile()
@@ -161,7 +163,7 @@ class MapExtension extends GuiExtension {
           label: 'Tiles Url',
           click: () => {
             if (!this._isLoaded) {
-              this.gui.notify('First load or create a map','warning')
+              this.gui.alerts.add('First load or create a map','warning')
               return
             }
             mapio.modal.tileLayer((conf) => {
@@ -172,7 +174,7 @@ class MapExtension extends GuiExtension {
           label: 'CsvTiles ',
           click: () => {
             if (!this._isLoaded) {
-              this.gui.notify('First load or create a map','warning')
+              this.gui.alerts.add('First load or create a map','warning')
               return
             }
             mapio.modal.csvTiles((conf) => {
@@ -183,7 +185,7 @@ class MapExtension extends GuiExtension {
           label: 'Guide',
           click: () => {
             if (!this._isLoaded) {
-              this.gui.notify('First load or create a map','warning')
+              this.gui.alerts.add('First load or create a map','warning')
               return
             }
             mapio.modal.guideLayer((conf) => {
@@ -237,7 +239,7 @@ class MapExtension extends GuiExtension {
             }
           },
           zoom: false,
-          layers: () => {}
+          layers: ()=>{}
         },
         tooltip: {
           polygon: true,
@@ -315,6 +317,7 @@ class MapExtension extends GuiExtension {
         if (regx.test(f.name)) {
           mapio.loadMap(f.path, (conf) => {
             this.addNewMap(conf)
+            this.gui.alerts.add(`${conf.name} map loaded`,'success')
           })
         }
       }
@@ -443,7 +446,7 @@ class MapExtension extends GuiExtension {
         maps: this.maps
       })
       this.gui.workspace.on('load', () => {
-        this.gui.notify('loading maps from workspace...')
+        this.gui.alets.add('loading maps from workspace...','default')
         this.builder.clear(true)
         this.mapsList.clean()
         this.maps = {}
@@ -465,7 +468,7 @@ class MapExtension extends GuiExtension {
           options: this._options
         }, true) //overwriting
         this._setMap()
-        this.gui.notify(`${tot} maps from workspace loaded`)
+        this.gui.alerts.add(`${tot} maps from workspace loaded`,'default')
       })
 
       //check if there is a mapPage space in the current workspace and retrive it, this is useful on deactivate/activate of MapExtension
@@ -518,6 +521,7 @@ class MapExtension extends GuiExtension {
             click: () => {
               mapio.modal.createMap((conf) => {
                 this.addNewMap(conf)
+
               })
             }
           },
@@ -526,6 +530,7 @@ class MapExtension extends GuiExtension {
             click: () => {
               mapio.loadMapFile((conf) => {
                 this.addNewMap(conf)
+                this.gui.alerts.add(`${conf.name} map loaded`,'success')
               })
             }
           },
@@ -536,7 +541,7 @@ class MapExtension extends GuiExtension {
               label: 'File',
               click: () => {
                 if (!this._isLoaded) {
-                  this.gui.notify('First load or create a map','warning')
+                  this.gui.alerts.add('First load or create a map','warning')
                   return
                 }
                 this.openLayerFile()
@@ -545,33 +550,36 @@ class MapExtension extends GuiExtension {
               label: 'Tiles Url',
               click: () => {
                 if (!this._isLoaded) {
-                  this.gui.notify('First load or create a map','warning')
+                  this.gui.alerts.add('First load or create a map','warning')
                   return
                 }
                 mapio.modal.tileLayer((conf) => {
                   this.addLayer(conf)
+                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }, {
               label: 'CsvTiles ',
               click: () => {
                 if (!this._isLoaded) {
-                  this.gui.notify('First load or create a map','warning')
+                  this.gui.alerts.add('First load or create a map','warning')
                   return
                 }
                 mapio.modal.csvTiles((conf) => {
                   this.addLayer(conf)
+                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }, {
               label: 'Guide',
               click: () => {
                 if (!this._isLoaded) {
-                  this.gui.notify('First load or create a map','warning')
+                  this.gui.alerts.add('First load or create a map','warning')
                   return
                 }
                 mapio.modal.guideLayer((conf) => {
                   this.addLayer(conf)
+                  this.gui.alerts.add(`${conf.name} layer added`,'success')
                 })
               }
             }]
@@ -588,9 +596,9 @@ class MapExtension extends GuiExtension {
       action: () => {
         if (this._isLoaded) {
           mapio.saveAs(this.activeConfiguration, (c, p, e) => {
-            this.gui.notify(`${c.name} map saved in ${p}`)
+            this.gui.alerts.add(`${c.name} map saved in ${p}`)
           }, (err) => {
-            this.gui.notify(err,'danger')
+            this.gui.alerts.add(err,'error')
           })
         }
       }
@@ -651,6 +659,7 @@ class MapExtension extends GuiExtension {
     this.map = map
     this.builder.clear()
     this.builder.setMap(this.map)
+    this._options.builder.controls.layers = ()=>{}
     this.builder.setOptions(this._options.builder)
   }
 
@@ -803,10 +812,11 @@ class MapExtension extends GuiExtension {
       active: this._settings.expert,
       text: "Expert mode",
       onactivate: () => {
-        dialog.showErrorBox('You are an expert now', 'Alert mode enabled, press Ctrl + P to modify configuration')
+        this.gui.alerts.add('Expert mode enabled, press Ctrl + P to modify configuration','warning')
         this._settings.expert = true
       },
       ondeactivate: () => {
+        this.gui.alerts.add('Expert mode disables','default')
         this._settings.expert = false
       }
     })
@@ -981,7 +991,7 @@ class MapExtension extends GuiExtension {
         this.builder.setConfiguration(configuration)
       } catch (e) {
         // otherwise means that the builder is unable to load the map
-        this.gui.notify(e,'error')
+        this.gui.alerts.add(e,'error')
         return
       }
     let body = new ToggleElement(document.createElement('DIV'))
@@ -1007,9 +1017,9 @@ class MapExtension extends GuiExtension {
       type: 'normal',
       click: () => {
         mapio.saveAs(this.maps[configuration._id], (c, p, e) => {
-          this.gui.notify(`${c.name} map saved in ${p}`)
+          this.gui.alerts.add(`${c.name} map saved in ${p}`,'success')
         }, (err) => {
-          this.gui.notify(err,'error')
+          this.gui.alerts.add(err,'error')
         })
       }
     }))
@@ -1173,10 +1183,9 @@ class MapExtension extends GuiExtension {
           multiLevel: true,
           baseLayer: true
         })
-        this.gui.notify(`${pth} added`,'success')
-        util.notifyOS(`${pth} added`)
+        this.gui.alerts.add(`${pth} added`,'success')
       }
-      this.gui.notify(`${pth} started conversion`,'default')
+      this.gui.alerts.add(`${pth} started conversion`,'default')
       converter.convertArray([pth], path.dirname(pth))
     }
   }
@@ -1190,6 +1199,7 @@ class MapExtension extends GuiExtension {
     conf = mapio.parseLayer(conf)
     this.builder.loadLayer(conf)
     this.activeConfiguration.layers[`layer_${conf._id}`] = conf
+    this.gui.alerts.add(`${conf.name} layer added`,'success')
   }
 
 
@@ -1200,6 +1210,7 @@ class MapExtension extends GuiExtension {
   loadMap(path) {
     mapio.loadMap(path, (conf) => {
       this.addNewMap(conf)
+      this.gui.alerts.add(`${conf.name} map loaded`,'success')
     })
   }
 

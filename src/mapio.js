@@ -283,7 +283,6 @@ function parseLayer(config, basePath) {
   }
   if (config.type.includes('drawnPolygons')) {
     config.type = 'featureGroup'
-    config.role = 'drawnItems'
     if (config.polygons) {
       config.layers = config.polygons
     } else {
@@ -297,6 +296,7 @@ function parseLayer(config, basePath) {
     } else {
       config.layers = {}
     }
+    delete config.polygons
     Object.keys(config.layers).map((key) => {
       config.layers[key].type = config.layers[key].type || 'polygon'
     })
@@ -304,6 +304,7 @@ function parseLayer(config, basePath) {
   if (config.type.includes('drawnMarkers')) {
     config.type = 'featureGroup'
     config.layers = config.markers
+    delete config.markers
     Object.keys(config.layers).map((key) => {
       config.layers[key].type = config.layers[key].type || 'marker'
     })

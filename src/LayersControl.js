@@ -47,7 +47,6 @@
     * Class constructor.
     */
    constructor(gui) {
-
      this.gui = gui;
 
      //create layers-widget
@@ -140,7 +139,7 @@
      });
 
      this.builder.on('error', (e) => {
-       this.gui.notify('MapBuilder Error',e.error,'danger');
+       this.gui.alerts.add(e.error,'error');
      });
 
      this.builder.on('load:control', (e) => {
@@ -184,51 +183,6 @@
      let customMenuItems = [];
      let list;
      switch (configuration.type) {
-       case 'tileLayerMultiSlice':
-         if (configuration.baseLayer) {
-           list = this.baselist;
-         } else {
-           list = this.tileslist;
-         }
-         tools = this.createToolbox(layer, configuration, {
-           opacity: true
-         });
-
-         if (configuration.baseLayer) {
-           if (!this.baseLayer) {
-             this.baseLayer = layer;
-             where.addLayer(this.baseLayer);
-             this.builder.map.setSlice(configuration.options.minSlice);
-           }
-         }
-         customMenuItems.push(new MenuItem({
-           label: 'Delete',
-           click: () => {
-             if (this.baseLayer === layer) {
-               return;
-             }
-             where.removeLayer(layer);
-             list.removeItem(configuration._id);
-             let key = util.findKeyId(configuration._id, this.builder._configuration.layers);
-             delete this.builder._configuration.layers[key];
-           }
-         }));
-         customMenuItems.push(new MenuItem({
-           type: 'separator'
-         }));
-         customMenuItems.push(new MenuItem({
-           label: 'Base layer',
-           type: 'checkbox',
-           checked: configuration.baseLayer,
-           click: (menuItem) => {
-             if (this.baseLayer === layer) return;
-             this.builder.map.removeLayer(layer);
-             list.removeItem(`${configuration._id}`);
-             configuration.baseLayer = menuItem.checked;
-             this.builder.loadLayer(configuration);
-           }
-         }));
-         break;
        case 'tileLayer':
          if (configuration.baseLayer) {
            list = this.baselist;
@@ -245,6 +199,7 @@
              where.addLayer(this.baseLayer);
            }
          }
+
          customMenuItems.push(new MenuItem({
            label: 'Delete',
            click: () => {
@@ -265,7 +220,7 @@
            type: 'checkbox',
            checked: configuration.baseLayer,
            click: (menuItem) => {
-             if (this.baseLayer === layer) return;
+            // if (this.baseLayer === layer) return;
              this.builder.map.removeLayer(layer);
              list.removeItem(`${configuration._id}`);
              configuration.baseLayer = menuItem.checked;
@@ -297,7 +252,7 @@
            label: 'Delete',
            click: () => {
              if (configuration.role && configuration.role.includes('drawnItems')) {
-               this.gui.notify('Warning','You dont want to remove the drawnItems layer...','warning');
+               this.gui.alerts.add('Better not to remove drawnItems layer...','warning');
                return;
              }
              this.overlaylist.removeItem(`${configuration._id}`);
@@ -594,7 +549,7 @@
              layer.setStyle({
                fillOpacity: 1
              });
-             //this.gui.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
+             this.gui.footer.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.push({
                configuration: configuration,
@@ -606,10 +561,10 @@
                  fillOpacity: 1
                });
              }
-             //this.gui.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
+             this.gui.footer.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (configuration.baseLayer) {
-               where.removeLayer(this.baseLayer);
+               if (this.baseLayer) where.removeLayer(this.baseLayer);
                this.baseLayer = layer;
              }
              where.addLayer(layer);
@@ -625,7 +580,7 @@
                layer: layer,
                where: where
              }), 1);
-             //this.gui.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
+             this.gui.footer.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
              layer.setStyle({
                fillOpacity: configuration.options.fillOpacity || 0.3
              });
@@ -640,7 +595,7 @@
                  fillOpacity: configuration.options.fillOpacity || 0.3
                });
              }
-             //this.gui.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
+             this.gui.footer.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);
            } else {
              if (!configuration.baseLayer) {
                where.removeLayer(layer);

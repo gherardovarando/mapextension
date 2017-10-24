@@ -1133,67 +1133,46 @@ class MapExtension extends GuiExtension {
       if (!conf) return
       conf = mapio.parseLayer(conf, path.dirname(pth))
       this.addLayer(conf)
-    } else if (pth.endsWith('.jpg') || pth.endsWith('.JPG') || pth.endsWith('.png') || pth.endsWith('.gif')) {
+    } else if (pth.endsWith('.jpg') || pth.endsWith('.JPG') || pth.endsWith('.png') || pth.endsWith('.gif') || pth.endsWith('.tiff') || pth.endsWith('.tif') || pth.endsWith('.TIF') || pth.endsWith('.TIFF')) {
       var dim = sizeOf(pth)
       let siz = Math.max(dim.height, dim.width)
-      sharp(pth).png().tile({
+      let task = new Task('creating tile layer..')
+      this.gui.taskManager.addTask(task)
+      task.run()
+      let name = path.basename(pth, path.extname(pth))
+      let dir = path.join(path.dirname(pth), name)
+      let url = path.join(path.dirname(pth), name, '{z}', '{y}', '{x}.png')
+      sharp(pth).png().normalise().tile({
         size: 256,
         layout: 'google'
-      }).toFile(path.dirname(pth), (err, info) => {
+      }).toFile(path.join(path.dirname(pth), name), (err, info) => {
+        if (err) {
+          task.fail(err)
+          this.gui.alerts.add(err, 'danger')
+          return
+        } else {
+          task.success()
+          this.gui.alerts.add(`${path.basename(pth)} layer folder created`, 'success')
+        }
+        let content = fs.readdirSync(dir)
         this.addLayer({
-          name: pth,
-          url: path.join(path.dirname(pth),'{z}','{y}','{x}.png'),
-          author: 'unknown',
-          type: options.type || 'imageOverlay',
+          name: name,
+          url: url,
+          type: 'tileLayer',
+          baseLayer: true,
           options: {
-            maxZoom: 8,
-            maxNativeZoom: 0,
             opacity: 1,
-            tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-            bounds: [
-              [-Math.floor(dim.height * 256 / siz), 0],
-              [0, Math.floor(dim.width * 256 / siz)]
-            ]
+            maxNativeZoom: content.length - 2,
+            minNativeZoom: 0,
+            minZoom: 0,
+            tileSize: 256
           }
         })
       })
-
     } else if (pth.endsWith('.csv')) {
 
-    } else if (pth.endsWith('.tiff') || pth.endsWith('.tif')) { //convert it to png and use it
-      var converter = new ConvertTiff({
-        prefix: 'slice'
-      })
-      let task = new Task('Convert tiff', pth)
-      this.gui.taskManager.addTask(task)
-      task.run()
-      converter.progress = (converted, total) => {
-        task.updateProgress(100)
-        var dim = sizeOf(`${converted[0].target}\/slice1.png`)
-        let siz = Math.max(dim.height, dim.width)
-        this.addLayer({
-          type: `tileLayer`,
-          url: `${converted[0].target}\/slice{level}.png`,
-          options: {
-            tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-            bounds: [
-              [-Math.floor(dim.height * 256 / siz), 0],
-              [0, Math.floor(dim.width * 256 / siz)]
-            ],
-            maxNativeZoom: 0,
-            maxZoom: 8,
-            minLevel: 1,
-            maxLevel: 10000
-          },
-          name: pth,
-          multiLevel: true,
-          baseLayer: true
-        })
-        this.gui.alerts.add(`${pth} added`, 'success')
-        task.success()
-      }
-      this.gui.alerts.add(`${pth} started conversion`, 'default')
-      converter.convertArray([pth], path.dirname(pth))
+    } else if (pth.endsWith('.tiff') || pth.endsWith('.tif') || pth.endsWith('.TIF') || pth.endsWith('.TIFF')) { //convert it to png and use instance
+
     }
   }
 

@@ -32,8 +32,10 @@ const {
   GuiExtension,
   ButtonsContainer,
   util,
-  input
+  input,
+  Task
 } = require('electrongui') // use module.parent so it can be imported
+const sharp = require('sharp')
 const path = require('path')
 const sizeOf = require('image-size')
 const ConvertTiff = require('tiff-to-png')
@@ -325,7 +327,7 @@ class MapExtension extends GuiExtension {
 
     this.mapPane = new SplitPane(util.div())
 
-    this.mapPane.one.ondragover = (ev) => {
+    this.mapPane.one.element.ondragover = (ev) => {
       ev.dataTransfer.dropEffect = "none"
       for (let f of ev.dataTransfer.files) {
         let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i
@@ -335,12 +337,22 @@ class MapExtension extends GuiExtension {
         }
       }
     }
-    this.mapPane.one.ondrop = (ev) => {
+    this.mapPane.one.element.ondrop = (ev) => {
       ev.preventDefault()
       for (let f of ev.dataTransfer.files) {
         let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i
         if (regx.test(f.name) && (this._isLoaded)) {
-          this.addLayerFile(f.path)
+          dialog.showMessageBox({
+            title: 'Add Layer?',
+            type: 'warning',
+            buttons: ['No', "Yes"],
+            message: `Add layer from  ${f.path} to map ${this.activeConfiguration.name} ?`,
+            noLink: true
+          }, (id) => {
+            if (id > 0) {
+              this.addLayerFile(f.path)
+            }
+          })
         }
       }
     }
@@ -1116,7 +1128,7 @@ class MapExtension extends GuiExtension {
    */
   addLayerFile(pth, options) {
     options = options || {}
-    if (pth.endsWith('.json')) {
+    if (pth.endsWith('.json') || pth.endsWith('.layerconfig')) {
       let conf = util.readJSONsync(pth)
       if (!conf) return
       conf = mapio.parseLayer(conf, path.dirname(pth))
@@ -1124,31 +1136,39 @@ class MapExtension extends GuiExtension {
     } else if (pth.endsWith('.jpg') || pth.endsWith('.JPG') || pth.endsWith('.png') || pth.endsWith('.gif')) {
       var dim = sizeOf(pth)
       let siz = Math.max(dim.height, dim.width)
-      this.addLayer({
-        name: pth,
-        url: pth,
-        author: 'unknown',
-        type: options.type || 'imageOverlay',
-        options: {
-          maxZoom: 8,
-          maxNativeZoom: 0,
-          opacity: 1,
-          tileSize: [dim.width / siz * 256, dim.height / siz * 256],
-          bounds: [
-            [-Math.floor(dim.height * 256 / siz), 0],
-            [0, Math.floor(dim.width * 256 / siz)]
-          ]
-        }
-
+      sharp(pth).png().tile({
+        size: 256,
+        layout: 'google'
+      }).toFile(path.dirname(pth), (err, info) => {
+        this.addLayer({
+          name: pth,
+          url: path.join(path.dirname(pth),'{z}','{y}','{x}.png'),
+          author: 'unknown',
+          type: options.type || 'imageOverlay',
+          options: {
+            maxZoom: 8,
+            maxNativeZoom: 0,
+            opacity: 1,
+            tileSize: [dim.width / siz * 256, dim.height / siz * 256],
+            bounds: [
+              [-Math.floor(dim.height * 256 / siz), 0],
+              [0, Math.floor(dim.width * 256 / siz)]
+            ]
+          }
+        })
       })
+
     } else if (pth.endsWith('.csv')) {
 
     } else if (pth.endsWith('.tiff') || pth.endsWith('.tif')) { //convert it to png and use it
       var converter = new ConvertTiff({
         prefix: 'slice'
       })
-
+      let task = new Task('Convert tiff', pth)
+      this.gui.taskManager.addTask(task)
+      task.run()
       converter.progress = (converted, total) => {
+        task.updateProgress(100)
         var dim = sizeOf(`${converted[0].target}\/slice1.png`)
         let siz = Math.max(dim.height, dim.width)
         this.addLayer({
@@ -1163,13 +1183,14 @@ class MapExtension extends GuiExtension {
             maxNativeZoom: 0,
             maxZoom: 8,
             minLevel: 1,
-            maxLevel: 100
+            maxLevel: 10000
           },
           name: pth,
           multiLevel: true,
           baseLayer: true
         })
         this.gui.alerts.add(`${pth} added`, 'success')
+        task.success()
       }
       this.gui.alerts.add(`${pth} started conversion`, 'default')
       converter.convertArray([pth], path.dirname(pth))

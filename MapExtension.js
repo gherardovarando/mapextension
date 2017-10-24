@@ -35,10 +35,8 @@ const {
   input,
   Task
 } = require('electrongui') // use module.parent so it can be imported
-const sharp = require('sharp')
 const path = require('path')
 const sizeOf = require('image-size')
-const ConvertTiff = require('tiff-to-png')
 const json2csv = require('json2csv')
 const fs = require('fs')
 const mapio = require('./src/mapio.js')
@@ -1133,45 +1131,11 @@ class MapExtension extends GuiExtension {
       if (!conf) return
       conf = mapio.parseLayer(conf, path.dirname(pth))
       this.addLayer(conf)
-    } else if (pth.endsWith('.jpg') || pth.endsWith('.JPG') || pth.endsWith('.png') || pth.endsWith('.gif') || pth.endsWith('.tiff') || pth.endsWith('.tif') || pth.endsWith('.TIF') || pth.endsWith('.TIFF')) {
-      var dim = sizeOf(pth)
-      let siz = Math.max(dim.height, dim.width)
-      let task = new Task('creating tile layer..')
-      this.gui.taskManager.addTask(task)
-      task.run()
-      let name = path.basename(pth, path.extname(pth))
-      let dir = path.join(path.dirname(pth), name)
-      let url = path.join(path.dirname(pth), name, '{z}', '{y}', '{x}.png')
-      sharp(pth).png().normalise().tile({
-        size: 256,
-        layout: 'google'
-      }).toFile(path.join(path.dirname(pth), name), (err, info) => {
-        if (err) {
-          task.fail(err)
-          this.gui.alerts.add(err, 'danger')
-          return
-        } else {
-          task.success()
-          this.gui.alerts.add(`${path.basename(pth)} layer folder created`, 'success')
-        }
-        let content = fs.readdirSync(dir)
-        this.addLayer({
-          name: name,
-          url: url,
-          type: 'tileLayer',
-          baseLayer: true,
-          options: {
-            opacity: 1,
-            maxNativeZoom: content.length - 2,
-            minNativeZoom: 0,
-            minZoom: 0,
-            tileSize: 256
-          }
-        })
-      })
+    } else if (pth.endsWith('.jpg') || pth.endsWith('.JPG') || pth.endsWith('.png') || pth.endsWith('.gif')) {
+
     } else if (pth.endsWith('.csv')) {
 
-    } else if (pth.endsWith('.tiff') || pth.endsWith('.tif') || pth.endsWith('.TIF') || pth.endsWith('.TIFF')) { //convert it to png and use instance
+    } else if (pth.endsWith('.tiff') || pth.endsWith('.tif') || pth.endsWith('.TIF') || pth.endsWith('.TIFF')) {
 
     }
   }
@@ -1199,7 +1163,6 @@ class MapExtension extends GuiExtension {
       this.gui.alerts.add(`${conf.name} map loaded`, 'success')
     })
   }
-
 
 
 }

@@ -455,7 +455,6 @@ class MapExtension extends GuiExtension {
       })
 
       let loadWorkspace = () => {
-        console.log(this)
         this.gui.alerts.add('loading maps from workspace...', 'default')
         if (this.builder) this.builder.clear(true)
         if (this.mapsList) this.mapsList.clean()
@@ -667,6 +666,7 @@ class MapExtension extends GuiExtension {
   _settingsModal() {
     let mR = false
     let bR = false
+    if (this._setMod) this._setMod.destroy()
     let modal = new Modal({
       title: ``,
       width: '400px',
@@ -688,6 +688,7 @@ class MapExtension extends GuiExtension {
         }
       }
     })
+    this._setMod = modal
     let body = util.div('pane-group pane')
     let sid = new Sidebar(body, {
       className: 'pane-sm'

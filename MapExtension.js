@@ -455,6 +455,7 @@ class MapExtension extends GuiExtension {
       })
 
       let loadWorkspace = () => {
+        console.log(this)
         this.gui.alerts.add('loading maps from workspace...', 'default')
         if (this.builder) this.builder.clear(true)
         if (this.mapsList) this.mapsList.clean()
@@ -479,7 +480,7 @@ class MapExtension extends GuiExtension {
         this._setMap()
         this.gui.alerts.add(`${tot} maps from workspace loaded`, 'default')
       }
-
+      this.gui.workspace.on('load',()=> console.log('laod'))
       this.gui.workspace.on('load', loadWorkspace)
       this.on('deactivate', () => {
         this.gui.workspace.removeListener('load', loadWorkspace)

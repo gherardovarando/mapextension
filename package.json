@@ -23,7 +23,7 @@
   "homepage": "https://github.com/gherardovarando/mapextension#readme",
   "dependencies": {
     "electron-is-dev": "^0.1.2",
-    "electrongui": "^0.5.6",
+    "electrongui": "^0.5.11",
     "image-size": "^0.6.1",
     "jsoneditor": "^5.9.6",
     "leaflet": "^1.2.0",

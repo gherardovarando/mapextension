@@ -50,7 +50,7 @@ window.Papa = require('papaparse') //we have to define Papa as a global object
 const leafletcsvtiles = require('leaflet-csvtiles')
 const geometryutil = require('leaflet-geometryutil')
 const leafletDraw = require('leaflet-draw')
-util.insertModuleCSS('leafelt-draw','leaflet.draw.css')
+util.insertModuleCSS('leaflet-draw','leaflet.draw.css')
 require('leaflet-multilevel')
 const snap = require(`leaflet-snap`)
 const builder = require('leaflet-map-builder')

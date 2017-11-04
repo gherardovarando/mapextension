@@ -44,7 +44,7 @@ const LayersControl = require('./src/LayersControl.js')
 
 const JSONEditor = require('jsoneditor')
 const leaflet = require('leaflet')
-util.insertModuleCSS('leaflet','leafelt.css')
+util.insertModuleCSS('leaflet','leaflet.css')
 //const leafletMarkerCluster = require('leaflet.markercluster')
 window.Papa = require('papaparse') //we have to define Papa as a global object
 const leafletcsvtiles = require('leaflet-csvtiles')

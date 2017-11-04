@@ -1,6 +1,6 @@
 {
   "name": "mapextension",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "map extension for electrongui",
   "main": "MapExtension.js",
   "scripts": {

@@ -11,8 +11,10 @@ The extension permit to import, export, create maps add different type of layers
 
 ### Installation
 
+#### Dev install
 Install the extension in your electron app with
 `npm install --save mapextension`.
+
 
 ## API
 

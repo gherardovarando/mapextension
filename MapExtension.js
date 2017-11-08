@@ -481,7 +481,6 @@ class MapExtension extends GuiExtension {
         this._setMap()
         this.gui.alerts.add(`${tot} maps from workspace loaded`, 'default')
       }
-      this.gui.workspace.on('load',()=> console.log('laod'))
       this.gui.workspace.on('load', loadWorkspace)
       this.on('deactivate', () => {
         this.gui.workspace.removeListener('load', loadWorkspace)

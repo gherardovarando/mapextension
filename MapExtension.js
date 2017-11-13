@@ -41,6 +41,7 @@ const mapio = require('./src/mapio.js')
 const LayersControl = require('./src/LayersControl.js')
 
 const JSONEditor = require('jsoneditor')
+util.insertModuleCSS('jsoneditor','dist/jsoneditor.css')
 const leaflet = require('leaflet')
 util.insertModuleCSS('leaflet','leaflet.css')
 //const leafletMarkerCluster = require('leaflet.markercluster')

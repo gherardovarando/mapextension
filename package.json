@@ -22,10 +22,8 @@
   },
   "homepage": "https://github.com/gherardovarando/mapextension#readme",
   "dependencies": {
-    "json2csv": "*",
     "electron-is-dev": "^0.1.2",
     "electrongui": "^0.6.9",
-    "image-size": "^0.6.1",
     "jsoneditor": "^5.9.6",
     "leaflet": "^1.2.0",
     "leaflet-csvtiles": "0.0.4",
@@ -35,7 +33,6 @@
     "leaflet-multilevel": "0.0.1",
     "leaflet-snap": "0.0.4",
     "leaflet.markercluster": "^1.2.0",
-    "papaparse": "^4.3.6",
-    "tiff-to-png": "^1.0.5"
+    "papaparse": "^4.3.6"
   }
 }

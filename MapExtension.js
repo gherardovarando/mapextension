@@ -36,8 +36,6 @@ const {
   Task
 } = require('electrongui') // use module.parent so it can be imported
 const path = require('path')
-const sizeOf = require('image-size')
-const json2csv = require('json2csv')
 const fs = require('fs')
 const mapio = require('./src/mapio.js')
 const LayersControl = require('./src/LayersControl.js')

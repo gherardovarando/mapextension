@@ -118,7 +118,6 @@
        placeholder: 'Search markers'
      })
 
-
    }
 
    /**
@@ -290,7 +289,7 @@
          })
          list = this.overlaylist
          break;
-       case 'polygon'
+       case 'polygon':
        list = this.regionsWidget
        where.addLayer(layer)
        customMenuItems.push(new MenuItem({

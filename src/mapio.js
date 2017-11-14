@@ -89,7 +89,7 @@ function loadMapfromFile(cl) {
     properties: ['openFile'],
     filters: [{
       name: 'Configuration file',
-      extensions: ['mapconfig', 'json', 'config']
+      extensions: ['map.json','mapconfig', 'json', 'config']
     }]
   }, (filename) => {
     if (filename) {
@@ -320,7 +320,7 @@ function saveAs(configuration, cl, errcl) {
     title: `Save ${configuration.name} map`,
     filters: [{
       name: 'JSON',
-      extensions: ['json']
+      extensions: ['map.json','json']
     }, {
       name: 'mapconfig',
       extensions: ['mapconfig']

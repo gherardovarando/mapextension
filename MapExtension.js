@@ -41,15 +41,15 @@ const mapio = require('./src/mapio.js')
 const LayersControl = require('./src/LayersControl.js')
 
 const JSONEditor = require('jsoneditor')
-util.insertModuleCSS('jsoneditor','dist/jsoneditor.css')
+util.insertModuleCSS('jsoneditor', 'dist/jsoneditor.css')
 const leaflet = require('leaflet')
-util.insertModuleCSS('leaflet','leaflet.css')
+util.insertModuleCSS('leaflet', 'leaflet.css')
 //const leafletMarkerCluster = require('leaflet.markercluster')
 window.Papa = require('papaparse') //we have to define Papa as a global object
 const leafletcsvtiles = require('leaflet-csvtiles')
 const geometryutil = require('leaflet-geometryutil')
 const leafletDraw = require('leaflet-draw')
-util.insertModuleCSS('leaflet-draw','leaflet.draw.css')
+util.insertModuleCSS('leaflet-draw', 'leaflet.draw.css')
 require('leaflet-multilevel')
 const snap = require(`leaflet-snap`)
 const builder = require('leaflet-map-builder')
@@ -1093,10 +1093,13 @@ class MapExtension extends GuiExtension {
       title: 'Add a new layer',
       filters: filters || [{
         name: 'Configuration',
-        extensions: ['json']
+        extensions: ['json', 'JSON']
       }, {
         name: 'Images',
         extensions: ['jpg', 'png', 'gif', 'tiff', 'tif']
+      }, {
+        name: 'GeoJSON',
+        extensions: ['geojson', 'geoJSON','geo.json']
       }],
       properties: ['openFile']
     }, (filenames) => {
@@ -1128,7 +1131,15 @@ class MapExtension extends GuiExtension {
    */
   addLayerFile(pth, options) {
     options = options || {}
-    if (pth.endsWith('.json') || pth.endsWith('.layerconfig')) {
+    if (pth.endsWith('.geoJSON') || pth.endsWith('.geojson') || pth.endsWith('geo.json')) {
+      let data = util.readJSONsync(pth)
+      let conf = {
+        type: 'geoJSON',
+        name: path.pth,
+        data: data
+      }
+      this.addLayer(conf)
+    } else if (pth.endsWith('.json') || pth.endsWith('.layerconfig') || pth.endsWith('.layer.json')) {
       let conf = util.readJSONsync(pth)
       if (!conf) return
       conf = mapio.parseLayer(conf, path.dirname(pth))

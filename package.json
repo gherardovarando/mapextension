@@ -24,10 +24,10 @@
   "homepage": "https://github.com/gherardovarando/mapextension#readme",
   "dependencies": {
     "electron-is-dev": "^0.1.2",
-    "electrongui": "^0.7.1",
-    "jsoneditor": "^5.9.6",
+    "electrongui": "^0.7.6",
+    "jsoneditor": "^5.10.1",
     "leaflet": "^1.2.0",
-    "leaflet-csvtiles": "0.0.4",
+    "leaflet-csvtiles": "^0.1.1",
     "leaflet-draw": "^0.4.12",
     "leaflet-geometryutil": "^0.8.0",
     "leaflet-map-builder": "^0.2.0",

@@ -290,24 +290,24 @@
          list = this.overlaylist
          break;
        case 'polygon':
-       list = this.regionsWidget
-       where.addLayer(layer)
-       customMenuItems.push(new MenuItem({
-         label: 'Color',
-         submenu: colors.menu({
-           color: configuration.options.color,
-           defineNew: true,
-           click: (col) => {
-             layer.setStyle({
-               color: col,
-               fillColor: col
-             });
-             configuration.options.color = col;
-             configuration.options.fillColor = col;
-           }
-         })
-       }))
-       break;
+         list = this.regionsWidget
+         where.addLayer(layer)
+         customMenuItems.push(new MenuItem({
+           label: 'Color',
+           submenu: colors.menu({
+             color: configuration.options.color,
+             defineNew: true,
+             click: (col) => {
+               layer.setStyle({
+                 color: col,
+                 fillColor: col
+               });
+               configuration.options.color = col;
+               configuration.options.fillColor = col;
+             }
+           })
+         }))
+         break;
        case 'rectangle':
          list = this.regionsWidget;
          where.addLayer(layer);
@@ -400,7 +400,7 @@
     * @param {Array<MenuItem>} customMenuItems a list of menu items.
     * @param {ToggleElement} tools specific tools for that layer.
     * @param {Object} configuration json layer configuration.
-    * @param {ListGroup} list target ListGroup.
+    * @param {ListGroup} list target ListGroup
     */
    _addToList(layer, configuration, where, customMenuItems, tools, list) {
      let txtTitle = input.input({
@@ -433,6 +433,13 @@
        click: () => {
          if (this.baseLayer === layer) {
            return;
+         }
+         if (where == this.builder._drawnItems) {
+           if (configuration.type.toLowerCase() === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
+             this._deleteMarkerCheck(this.selectedMarkers)
+           } else if (configuration.type != 'polyline') {
+             this._deleteRegionsCheck(this.selectedRegions)
+           }
          }
          where.removeLayer(layer);
          list.removeItem(configuration._id);

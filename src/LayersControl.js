@@ -436,9 +436,9 @@
          }
          if (where == this.builder._drawnItems) {
            if (configuration.type.toLowerCase() === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
-             this._deleteMarkerCheck(this.selectedMarkers)
+             this._removeMarker(configuration, layer, where)
            } else if (configuration.type != 'polyline') {
-             this._deleteRegionsCheck(this.selectedRegions)
+             this._removeRegion(configuration, layer, where)
            }
          }
          where.removeLayer(layer);

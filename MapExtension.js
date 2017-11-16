@@ -1077,7 +1077,6 @@ class MapExtension extends GuiExtension {
     this.mapsList.hideAllDetails()
     this.mapsList.activeItem(configuration._id)
     //this.mapsList.showDetails(configuration._id)
-    this.show()
   }
 
 

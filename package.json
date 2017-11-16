@@ -13,7 +13,8 @@
   "keywords": [
     "map",
     "leaflet",
-    "electrongui"
+    "electrongui",
+    "guiextension"
   ],
   "author": "Gherardo Varando <gherardo.varando@gmail.com>",
   "license": "MIT",

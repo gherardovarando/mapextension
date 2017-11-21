@@ -568,7 +568,7 @@ class MapExtension extends GuiExtension {
                 })
               }
             }, {
-              label: 'Guide',
+              label: 'Grid',
               click: () => {
                 if (!this._isLoaded) {
                   this.gui.alerts.add('First load or create a map', 'warning')

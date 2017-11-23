@@ -128,7 +128,6 @@
      this.builder = builder
      this.selectedRegions = []
      this.selectedMarkers = []
-
      this.builder.on('clear', () => {
        this.baselist.clean()
        this.tileslist.clean()
@@ -249,6 +248,37 @@
            }
          }))
          break;
+       case 'deepZoom':
+         if (configuration.baseLayer) {
+           list = this.baselist
+         } else {
+           list = this.tileslist
+         }
+         tools = this.createToolbox(layer, configuration, {
+           opacity: true
+         })
+         if (configuration.baseLayer) {
+           if (!this.baseLayer) {
+             this.baseLayer = layer
+             where.addLayer(this.baseLayer);
+           }
+         }
+         customMenuItems.push(new MenuItem({
+           type: 'separator'
+         }));
+         customMenuItems.push(new MenuItem({
+           label: 'Base layer',
+           type: 'checkbox',
+           checked: configuration.baseLayer,
+           click: (menuItem) => {
+             // if (this.baseLayer === layer) return;
+             this.builder.map.removeLayer(layer)
+             list.removeItem(`${configuration._id}`)
+             configuration.baseLayer = menuItem.checked
+             this.builder.loadLayer(configuration)
+           }
+         }))
+         break;
        case 'imageOverlay':
          tools = this.createToolbox(layer, configuration, {
            opacity: true
@@ -307,6 +337,12 @@
              }
            })
          }))
+         customMenuItems.push(new MenuItem({
+           label: 'Delete selected',
+           click: () => {
+             this._deleteRegionsCheck(this.selectedRegions)
+           }
+         }))
          break;
        case 'rectangle':
          list = this.regionsWidget;
@@ -325,7 +361,13 @@
                configuration.options.fillColor = col
              }
            })
-         }));
+         }))
+         customMenuItems.push(new MenuItem({
+           label: 'Delete selected',
+           click: () => {
+             this._deleteRegionsCheck(this.selectedRegions)
+           }
+         }))
          break;
        case 'circle':
          list = this.regionsWidget;
@@ -344,7 +386,13 @@
                configuration.options.fillColor = col;
              }
            })
-         }));
+         }))
+         customMenuItems.push(new MenuItem({
+           label: 'Delete selected',
+           click: () => {
+             this._deleteRegionsCheck(this.selectedRegions)
+           }
+         }))
          break;
        case 'polyline':
          list = this.regionsWidget;
@@ -358,6 +406,12 @@
              this._editMarkerDetails(layer, configuration);
            }
          }))
+         customMenuItems.push(new MenuItem({
+           label: 'Delete selected',
+           click: () => {
+             this._deleteMarkerCheck(this.selectedMarkers)
+           }
+         }))
          break
        case 'circlemarker':
          list = this.markersWidget
@@ -366,6 +420,12 @@
            label: 'Edit',
            click: () => {
              this._editMarkerDetails(layer, configuration);
+           }
+         }))
+         customMenuItems.push(new MenuItem({
+           label: 'Delete selected',
+           click: () => {
+             this._deleteMarkerCheck(this.selectedMarkers)
            }
          }))
          break;
@@ -685,15 +745,16 @@
 
    _removeRegion(configuration, layer, where) {
      if (where === this.builder._drawnItems) {
-       this.builder._drawnItems.removeLayer(layer);
-       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-       this.regionsWidget.removeItem(configuration._id);
-       delete this.builder._configuration.layers.drawnItems.layers[key];
        this.selectedRegions.splice(this.selectedRegions.indexOf({
          configuration: configuration,
          layer: layer,
          where: where
-       }), 1);
+       }), 1)
+       this.builder._drawnItems.removeLayer(layer)
+       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers)
+       this.regionsWidget.removeItem(configuration._id)
+       delete this.builder._configuration.layers.drawnItems.layers[key]
+
      }
    }
 
@@ -701,15 +762,15 @@
 
    _removeMarker(configuration, layer, where) {
      if (where === this.builder._drawnItems) {
-       this.builder._drawnItems.removeLayer(layer);
-       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers);
-       this.markersWidget.removeItem(configuration._id);
-       delete this.builder._configuration.layers.drawnItems.layers[key];
        this.selectedMarkers.splice(this.selectedMarkers.indexOf({
          configuration: configuration,
          layer: layer,
          where: where
-       }), 1);
+       }), 1)
+       this.builder._drawnItems.removeLayer(layer)
+       let key = util.findKeyId(configuration._id, this.builder._configuration.layers.drawnItems.layers)
+       this.markersWidget.removeItem(configuration._id)
+       delete this.builder._configuration.layers.drawnItems.layers[key]
      }
    }
 
@@ -730,8 +791,6 @@
        onsubmit: () => {
          configuration.name = txtLayerName.value;
          list.setTitle(configuration._id, configuration.name);
-         layer.setTooltipContent(txtLayerName.value);
-         layer.setPopupContent(`<strong>${txtLayerName.value}</strong> <p> ${configuration.details}</p>`);
        }
      });
      modal.show();
@@ -789,9 +848,9 @@
        noLink: true
      }, (id) => {
        if (id > 0) {
-         markers.map((c) => {
-           this._removeMarker(c.configuration, c.layer, c.where);
-         });
+         for (let i = markers.length - 1; i >= 0; i--) {
+           this._removeMarker(markers[i].configuration, markers[i].layer, markers[i].where)
+         }
        }
      });
    }
@@ -806,9 +865,9 @@
        noLink: true
      }, (id) => {
        if (id > 0) {
-         regions.map((c) => {
-           this._removeRegion(c.configuration, c.layer, c.where);
-         });
+         for (let i = regions.length - 1; i >= 0; i--) {
+           this._removeRegion(regions[i].configuration, regions[i].layer, regions[i].where)
+         }
        }
      });
    }

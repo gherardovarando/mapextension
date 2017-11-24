@@ -305,7 +305,7 @@ class MapExtension extends GuiExtension {
     this.sidebar.element.ondragover = (ev) => {
       ev.dataTransfer.dropEffect = "none"
       for (let f of ev.dataTransfer.files) {
-        let regx = /(\.((json)|(mapconfig)))$/i
+        let regx = /(\.((json)|(mapconfig)|(map.json)))$/i
         if (regx.test(f.name)) {
           ev.dataTransfer.dropEffect = "link"
           ev.preventDefault()
@@ -315,7 +315,7 @@ class MapExtension extends GuiExtension {
     this.sidebar.element.ondrop = (ev) => {
       ev.preventDefault()
       for (let f of ev.dataTransfer.files) {
-        let regx = /(\.((json)|(mapconfig)))$/i
+        let regx = /(\.((json)|(mapconfig)|(map.json)))$/i
         if (regx.test(f.name)) {
           mapio.loadMap(f.path, (conf) => {
             this.addNewMap(conf)
@@ -330,8 +330,10 @@ class MapExtension extends GuiExtension {
     this.mapPane.one.element.ondragover = (ev) => {
       ev.dataTransfer.dropEffect = "none"
       for (let f of ev.dataTransfer.files) {
-        let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i
+        let regx = /(\.((json)|(layerconfig)|(geojson)|(geo.json)|(layer.json)))$/i
+        console.log(f.name)
         if (regx.test(f.name) && (this._isLoaded)) {
+          console.log('aa')
           ev.dataTransfer.dropEffect = "link"
           ev.preventDefault()
         }
@@ -340,7 +342,7 @@ class MapExtension extends GuiExtension {
     this.mapPane.one.element.ondrop = (ev) => {
       ev.preventDefault()
       for (let f of ev.dataTransfer.files) {
-        let regx = /(\.((json)|(layerconfig)|(jpg)|(gif)|(csv)|(jpg)|(png)|(tif)|(tiff)))$/i
+        let regx = /(\.((json)|(layerconfig)|(geojson)|(geo.json)|(layer.json)))$/i
         if (regx.test(f.name) && (this._isLoaded)) {
           dialog.showMessageBox({
             title: 'Add Layer?',
@@ -1093,13 +1095,10 @@ class MapExtension extends GuiExtension {
       title: 'Add a new layer',
       filters: filters || [{
         name: 'Configuration',
-        extensions: ['json', 'JSON']
-      }, {
-        name: 'Images',
-        extensions: ['jpg', 'png', 'gif', 'tiff', 'tif']
+        extensions: ['layer.json','json', 'JSON']
       }, {
         name: 'GeoJSON',
-        extensions: ['geojson', 'geoJSON','geo.json']
+        extensions: ['geojson', 'geoJSON','geo.json','GEOJSON']
       }],
       properties: ['openFile']
     }, (filenames) => {
@@ -1131,7 +1130,7 @@ class MapExtension extends GuiExtension {
    */
   addLayerFile(pth, options) {
     options = options || {}
-    if (pth.endsWith('.geoJSON') || pth.endsWith('.geojson') || pth.endsWith('geo.json')) {
+    if (pth.endsWith('.geoJSON') || pth.endsWith('.geojson') || pth.endsWith('.geo.json')) {
       let data = util.readJSONsync(pth)
       let conf = {
         type: 'geoJSON',

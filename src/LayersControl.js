@@ -526,7 +526,7 @@
        context.append(menuItem);
      });
      layer.on('contextmenu', (e) => {
-       context.popup();
+       context.popup({});
      });
      list.addItem({
        id: configuration._id,
@@ -534,7 +534,7 @@
        details: tools,
        active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
        oncontextmenu: () => {
-         context.popup();
+         context.popup({});
        },
        onclick: {
          active: (item, e) => {

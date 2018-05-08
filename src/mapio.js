@@ -396,7 +396,7 @@ function modalcsvlayer(cl, config) {
       }
     }
   }
-  let body = util.div('pane pane-group')
+  let body = util.div('pane-group pane')
   let sidebar = new Sidebar(body, {
     className: 'pane-mini'
   })
@@ -483,7 +483,7 @@ function modalcsvlayer(cl, config) {
   let name = input.input({
     id: 'namenewlayer',
     type: 'text',
-    label: '',
+    label: 'Name',
     className: 'cell form-control',
     placeholder: 'name',
     parent: paneMain,
@@ -492,9 +492,9 @@ function modalcsvlayer(cl, config) {
   let url = input.input({
     id: 'urlnewlayer',
     type: 'text',
-    label: '',
+    label: 'Url template',
     className: 'cell form-control',
-    placeholder: 'tiles url template',
+    placeholder: '.../{x}/{y}.csv (right click to chose file)',
     parent: paneMain,
     value: config.url || '',
     oncontextmenu: (inp, e) => {
@@ -511,14 +511,14 @@ function modalcsvlayer(cl, config) {
           })
         }
       }])
-      menu.popup()
+      menu.popup({})
     }
   })
 
   let tileSize = input.input({
     id: 'tilesizenewlayer',
     type: 'text',
-    label: '',
+    label: 'tile size',
     className: 'cell form-control',
     placeholder: 'tile size',
     parent: paneSize,
@@ -527,7 +527,7 @@ function modalcsvlayer(cl, config) {
   let size = input.input({
     id: 'sizenewlayer',
     type: 'text',
-    label: '',
+    label: 'Size',
     className: 'cell form-control',
     placeholder: 'size',
     parent: paneSize,
@@ -536,7 +536,7 @@ function modalcsvlayer(cl, config) {
   let bounds = input.input({
     id: 'boundsnewlayer',
     type: 'text',
-    label: '',
+    label: 'Bounds',
     className: 'cell form-control',
     placeholder: 'bounds [[lat,lng],[lat,lng]]',
     parent: paneSize,
@@ -545,7 +545,7 @@ function modalcsvlayer(cl, config) {
   let minz = input.input({
     id: 'minzoomnewlayer',
     type: 'number',
-    label: '',
+    label: 'min Zoom',
     className: 'cell form-control',
     placeholder: 'minZoom',
     parent: paneStyle,
@@ -554,7 +554,7 @@ function modalcsvlayer(cl, config) {
   let maxz = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
-    label: '',
+    label: 'max Zoom',
     className: 'cell form-control',
     placeholder: 'maxZoom',
     parent: paneStyle,
@@ -623,7 +623,7 @@ function modalcsvlayer(cl, config) {
   let modal = new Modal({
     title: 'Add a csvTiles',
     body: body,
-    width: '300px',
+    width: '400px',
     onsubmit: () => {
       cl({
         name: name.value,
@@ -662,7 +662,7 @@ function modaltilelayer(cl, config) {
   let name = input.input({
     id: 'namenewlayer',
     type: 'text',
-    label: '',
+    label: 'name',
     className: 'cell form-control',
     placeholder: 'name',
     parent: body,
@@ -671,9 +671,9 @@ function modaltilelayer(cl, config) {
   let url = input.input({
     id: 'urlnewlayer',
     type: 'text',
-    label: '',
+    label: 'Url template',
     className: 'cell form-control',
-    placeholder: 'tiles url template (right click for help)',
+    placeholder: 'url template (right click for options)',
     parent: body,
     value: config.url || '',
     oninput: (inp) => {
@@ -729,14 +729,14 @@ function modaltilelayer(cl, config) {
           }
         }]
       }])
-      menu.popup()
+      menu.popup({})
     },
     value: ''
   })
   let tileSize = input.input({
     id: 'tilesizenewlayer',
     type: 'text',
-    label: '',
+    label: 'tile size',
     className: 'cell form-control',
     placeholder: 'tileSize',
     parent: body,
@@ -745,7 +745,7 @@ function modaltilelayer(cl, config) {
   let minz = input.input({
     id: 'minzoomnewlayer',
     type: 'number',
-    label: '',
+    label: 'min zoom',
     className: 'cell form-control',
     placeholder: 'minZoom',
     parent: body,
@@ -754,7 +754,7 @@ function modaltilelayer(cl, config) {
   let maxz = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
-    label: '',
+    label: 'max zoom',
     className: 'cell form-control',
     placeholder: 'maxZoom',
     parent: body,
@@ -780,7 +780,7 @@ function modaltilelayer(cl, config) {
   let minl = input.input({
     id: 'minlevelnewlayer',
     type: 'number',
-    label: '',
+    label: 'min level',
     className: 'cell form-control',
     placeholder: 'minLevel',
     parent: lC,
@@ -789,7 +789,7 @@ function modaltilelayer(cl, config) {
   let maxl = input.input({
     id: 'maxzoomnewlayer',
     type: 'number',
-    label: '',
+    label: 'max level',
     className: 'cell form-control',
     placeholder: 'maxLevel',
     parent: lC,
@@ -799,7 +799,7 @@ function modaltilelayer(cl, config) {
   let modal = new Modal({
     title: 'Add a tileLayer',
     body: body,
-    width: '200px',
+    width: '400px',
     onsubmit: () => {
       cl({
         name: name.value,
@@ -859,7 +859,7 @@ function modalGuideLayer(cl) {
   let modal = new Modal({
     title: 'Add a tileLayer',
     body: body,
-    width: '200px',
+    width: '400px',
     onsubmit: () => {
       cl({
         name: name.value || 'guide',

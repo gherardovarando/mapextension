@@ -390,7 +390,7 @@ class MapExtension extends GuiExtension {
           label: 'I am an expert...trust me',
           click: () => bar.style.display = 'none'
         }]
-      )).popup()
+      )).popup({})
     }
     configDisplay.appendChild(bar)
     this.configEditor = new JSONEditor(configDisplay, {
@@ -584,7 +584,7 @@ class MapExtension extends GuiExtension {
             }]
           }
         ])
-        ctn.popup()
+        ctn.popup({})
       }
     })
     let expBtn = this.gui.header.actionsContainer.addButton({
@@ -1058,7 +1058,7 @@ class MapExtension extends GuiExtension {
       icon: ic,
       toggle: true,
       oncontextmenu: () => {
-        ctn.popup()
+        ctn.popup({})
       },
       onclick: {
         active: () => {

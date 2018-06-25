@@ -28,7 +28,6 @@
     "jsoneditor": "^5.10.1",
     "leaflet": "^1.2.0",
     "leaflet-csvtiles": "^0.3.2",
-    "leaflet-deepzoom": "git+https://github.com/gherardovarando/leaflet-deepzoom.git",
     "leaflet-draw": "^0.4.12",
     "leaflet-geometryutil": "^0.8.0",
     "leaflet-map-builder": "^0.2.5",

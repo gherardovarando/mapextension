@@ -1,7 +1,9 @@
 ### MapExtension
 
 
-The MapExtension is the fundamental extension of MultiMap, it permits to load a configuration file (in [map.json](https://github.com/gherardovarando/map.schema.json) format), create, export and mainly visualize maps.
+The MapExtension is an extension for electrongui, it permits to load a 
+configuration file (in [map.json](https://github.com/gherardovarando/map.schema.json) 
+format), create, export and mainly visualize maps (geographical and not geographical).
 
 #### What is a map
 
@@ -26,11 +28,14 @@ A map is just an ensemble of layers, every layers can be one of the following:
 
 To load a map you can either select the map.json file from the menu `Maps > Load map` or dragging the map.json file into the application, in the maps list. You can also use the :heavy_plus_sign: button in the header bar.
 
-If in the map is defined a `basePath` variable MultiMap will show a warning and ask you if you want to redefine locally the `basePath` value (just do it for locally saved maps).
+If in the map is defined a `basePath` variable  a warning will be shown and it will
+ask you if you want to redefine locally the `basePath` value 
+(just do it for locally saved maps).
 
 #### Create a map
 
-To create a new map use the `Maps > Create map` menu or the :heavy_plus_sign: button in the header bar.
+To create a new map use the `Maps > Create map` menu or the :heavy_plus_sign: 
+button in the header bar.
 You will have to input the name of the map and the map will be created, you can then add layers.
 
 #### Add layers
@@ -51,8 +56,10 @@ If you select a geo.json file it will be imported as a geoJSON layer.
 #### Export a map
 
 To export the map as a map.json file, just select the :arrow_down: button or use the `Maps > Export map` menu.
-MultiMap try to remove basePath from the urls of the layers, this feature not always work (we plan to fix it soon).
+It will try to remove basePath from the urls of the layers, 
+this feature not always work (we plan to fix it soon).
 
 #### Expert Mode
 
-If you select expert mode from
+If you select expert mode from the setting menu you are going to be able to see and 
+modify directly the configuration object of the map.

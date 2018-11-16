@@ -11,6 +11,14 @@ The extension permit to import, export, create maps add different type of layers
 
 ### Installation
 
+To install **mapextension** in an electrongui app, you can use the built-in
+extension manager.
+Just select `Download npm module` in the `Extensions > Install extension` menu.
+Write `mapextension` in the search field and press enter, then select the
+`mapextension` from the list. After the extension is installed it needs to be
+loaded from the `Extensions` menu.
+
+
 #### Dev install
 Install the extension in your electron app with
 `npm install --save mapextension`.

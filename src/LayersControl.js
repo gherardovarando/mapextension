@@ -526,13 +526,16 @@
        context.append(menuItem);
      });
      layer.on('contextmenu', (e) => {
-       context.popup({});
+       if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0){
+          context.popup({ });
+       }
      });
      list.addItem({
        id: configuration._id,
        title: txtTitle,
        details: tools,
-       active: (this.baseLayer === layer) || (list === this.datalist) || (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
+       active: (this.baseLayer === layer) || (list === this.datalist) ||
+       (this.builder && where === this.builder.map && this.builder.map.hasLayer(layer)),
        oncontextmenu: () => {
          context.popup({});
        },

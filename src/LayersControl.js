@@ -576,7 +576,8 @@
              });
              if (configuration.type.toLowerCase() === 'circlemarker') {
                layer.setStyle({
-                 fillOpacity: 1
+                 fillOpacity: 1,
+                 opacity: 1
                });
              }
              this.gui.footer.notify(`${configuration.name} selected, (${this.selectedMarkers.length} tot)`);
@@ -600,7 +601,8 @@
              }), 1);
              this.gui.footer.notify(`${configuration.name} deselected, (${this.selectedRegions.length} tot)`);
              layer.setStyle({
-               fillOpacity: configuration.options.fillOpacity || 0.3
+               fillOpacity: configuration.options.fillOpacity || 0.3,
+               opacity: configuration.options.opacity || 0.6
              });
            } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this.selectedMarkers.splice(this.selectedMarkers.indexOf({
@@ -610,7 +612,8 @@
              }), 1);
              if (configuration.type.toLowerCase() === 'circlemarker') {
                layer.setStyle({
-                 fillOpacity: configuration.options.fillOpacity || 0.3
+                 fillOpacity: configuration.options.fillOpacity || 0.3,
+                 opacity: configuration.options.opacity || 0.6
                });
              }
              this.gui.footer.notify(`${configuration.name} deselected, (${this.selectedMarkers.length} tot)`);

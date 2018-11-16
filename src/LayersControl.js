@@ -396,6 +396,22 @@
          break;
        case 'polyline':
          list = this.regionsWidget;
+         where.addLayer(layer);
+         customMenuItems.push(new MenuItem({
+           label: 'Color',
+           submenu: colors.menu({
+             color: configuration.options.color,
+             defineNew: true,
+             click: (col) => {
+               layer.setStyle({
+                 color: col,
+                 fillColor: col
+               });
+               configuration.options.color = col
+               configuration.options.fillColor = col
+             }
+           })
+         }))
          break;
        case 'marker':
          list = this.markersWidget;
@@ -435,13 +451,13 @@
      this._addToList(layer, configuration, where, customMenuItems, tools, list)
      if (typeof layer.on === 'function') {
        layer.on('remove', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker', 'polyline'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.deactiveItem(`${e.target._id}`);
        });
        layer.on('add', (e) => {
-         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker'].indexOf(configuration.type) >= 0) {
+         if (['polygon', 'circle', 'rectangle', 'marker', 'circlemarker', 'circlemarker', 'polyline'].indexOf(configuration.type) >= 0) {
            return;
          }
          list.activeItem(`${e.target._id}`);
@@ -497,7 +513,7 @@
          if (where == this.builder._drawnItems) {
            if (configuration.type.toLowerCase() === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
              this._removeMarker(configuration, layer, where)
-           } else if (configuration.type != 'polyline') {
+           } else if (configuration.type != '') {
              this._removeRegion(configuration, layer, where)
            }
          }
@@ -526,7 +542,7 @@
        context.append(menuItem);
      });
      layer.on('contextmenu', (e) => {
-       if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0){
+       if (['polygon', 'circle', 'rectangle', 'marker', 'polyline'].indexOf(configuration.type) >= 0){
           context.popup({ });
        }
      });
@@ -541,14 +557,15 @@
        },
        onclick: {
          active: (item, e) => {
-           if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
+           if (['polygon', 'circle', 'rectangle', 'polyline'].indexOf(configuration.type) >= 0) {
              this.selectedRegions.push({
                configuration: configuration,
                layer: layer,
                where: where
              });
              layer.setStyle({
-               fillOpacity: 1
+               fillOpacity: 1,
+               opacity: 1
              });
              this.gui.footer.notify(`${configuration.name} selected, (${this.selectedRegions.length} tot)`);
            } else if (configuration.type === 'marker' || configuration.type.toLowerCase() === 'circlemarker') {
@@ -575,7 +592,7 @@
            }
          },
          deactive: (item, e) => {
-           if (['polygon', 'circle', 'rectangle'].indexOf(configuration.type) >= 0) {
+           if (['polygon', 'circle', 'rectangle', 'polyline'].indexOf(configuration.type) >= 0) {
              this.selectedRegions.splice(this.selectedRegions.indexOf({
                configuration: configuration,
                layer: layer,
@@ -916,7 +933,9 @@
            this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
          } else if (layer instanceof L.Circle) {
            this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
-         } else if (layer instanceof L.Polyline) {}
+         } else if (layer instanceof L.Polyline) {
+           this._removeRegion(layer._configuration, layer, this.builder._drawnItems);
+         }
        });
      });
 

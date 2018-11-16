@@ -201,15 +201,15 @@ class MapExtension extends GuiExtension {
         }
       }]
     })
-    this._settings = {
+    this._settings = { // TO REMOVE
       multiRegionSelect: true,
       multiMarkerSelect: false,
       crs: 'simple',
       zoomControl: false,
       tooltip: true,
       popup: true,
-      expert: isDev,
-    }
+      expert: isDev
+    }  ///// UP HERE TO REMOVE
     this._options = {
       toolbar: true,
       map: {

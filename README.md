@@ -18,8 +18,11 @@ Write `mapextension` in the search field and press enter, then select the
 `mapextension` from the list. After the extension is installed it needs to be
 loaded from the `Extensions` menu.
 
+Check the [documentation](https://gherardovarando.github.io/mapextension/)
+for more details.
 
-#### Dev install
+
+#### dev install
 Install the extension in your electron app with
 `npm install --save mapextension`.
 

@@ -162,7 +162,7 @@
        if (this.builder._configuration && this.builder._configuration.layers) {
          this.builder._configuration.layers.drawnItems = e.configuration
        }
-       this.gui.viewTrick()
+       //this.gui.viewTrick()
      })
 
      this.builder.on('set:map', () => {
@@ -463,7 +463,7 @@
          list.activeItem(`${e.target._id}`);
        });
      }
-     this.gui.viewTrick();
+     //this.gui.viewTrick();
    }
 
 

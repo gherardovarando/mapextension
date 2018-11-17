@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-'use strict'
+'use strict';
 
 const url = require('url')
 const {
@@ -908,9 +908,6 @@ function createMap(cl) {
   modal.show()
 
 }
-
-
-
 
 
 exports.exportConfiguration = exportConfiguration
